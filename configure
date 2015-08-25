@@ -113,6 +113,12 @@ compile_prog() {
   do_cc $QEMU_CFLAGS $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
 }
 
+compile_prog_cxx() {
+  local_cflags="$1"
+  local_ldflags="$2"
+  do_cxx $QEMU_CFLAGS $local_cflags -o $TMPE $TMPCXX $LDFLAGS $local_ldflags
+}
+
 do_libtool() {
     local mode=$1
     shift
@@ -237,6 +243,7 @@ netmap="no"
 pixman=""
 sdl=""
 sdlabi="1.2"
+llvm="no"
 virtfs=""
 vnc="yes"
 sparse="no"
@@ -264,6 +271,7 @@ debug_tcg="no"
 debug="no"
 strip_opt="yes"
 tcg_interpreter="no"
+tcg_llvm="no"
 bigendian="no"
 mingw32="no"
 gcov="no"
@@ -933,6 +941,10 @@ for opt do
   ;;
   --enable-tcg-interpreter) tcg_interpreter="yes"
   ;;
+  --disable-tcg-llvm) tcg_llvm="no"
+  ;;
+  --enable-tcg-llvm) tcg_llvm="yes"
+  ;;
   --disable-cap-ng)  cap_ng="no"
   ;;
   --enable-cap-ng) cap_ng="yes"
@@ -1292,6 +1304,7 @@ Advanced options (experts only):
                            Default:trace-<pid>
   --disable-slirp          disable SLIRP userspace network connectivity
   --enable-tcg-interpreter enable TCG with bytecode interpreter (TCI)
+  --enable-tcg-llvm        enable TCG with LLVM based recompilation
   --oss-lib                path to OSS library
   --cpu=CPU                Build for host CPU [$cpu]
   --with-coroutine=BACKEND coroutine backend. Supported options:
@@ -1382,6 +1395,11 @@ if test "$ARCH" = "unknown"; then
     else
         error_exit "Unsupported CPU = $cpu, try --enable-tcg-interpreter"
     fi
+fi
+
+if test "$tcg_llvm" = "yes" ; then
+    ARCH=llvm
+    llvm=yes
 fi
 
 # Consult white-list to determine whether to enable werror
@@ -2333,6 +2351,46 @@ EOF
     sdl_libs="$sdl_libs $x11_libs"
   fi
   libs_softmmu="$sdl_libs $libs_softmmu"
+fi
+
+##########################################
+# LLVM probe
+
+# Look for llvm configuration program (llvm-config).
+
+llvmconfig=`which llvm-config`
+
+if ! has ${llvmconfig}; then
+  if test "$llvm" = "yes" ; then
+    feature_not_found "llvm" "Install LLVM devel"
+  fi
+  llvm=no
+fi
+if test -n "$cross_prefix" && test "$(basename "$llvmconfig")" = llvm-config; then
+  echo warning: using "\"$llvmconfig\"" to detect cross-compiled llvm >&2
+fi
+
+llvm_too_old=no
+if test "$llvm" != "no" ; then
+  cat > $TMPCXX << EOF
+#include "llvm/ADT/STLExtras.h"
+int main( void ) { return 0; }
+EOF
+  llvm_cflags=`$llvmconfig --cxxflags 2> /dev/null`
+  llvm_libs=`$llvmconfig --libs 2> /dev/null`
+  llvm_ld=`$llvmconfig --ldflags 2> /dev/null`
+  if compile_prog_cxx "$llvm_cflags" "$llvm_ld $llvm_libs" ; then
+    llvm=yes
+  else # llvm not found
+    if test "$llvm" = "yes" ; then
+      feature_not_found "llvm" "Install LLVM devel"
+    fi
+    llvm=no
+  fi # llvm compile test
+fi
+
+if test "$llvm" = "yes" ; then
+  libs_softmmu="$llvm_ld $llvm_libs $libs_softmmu"
 fi
 
 ##########################################
@@ -4547,6 +4605,7 @@ echo "Install blobs     $blobs"
 echo "KVM support       $kvm"
 echo "RDMA support      $rdma"
 echo "TCG interpreter   $tcg_interpreter"
+echo "TCG LLVM target   $tcg_llvm"
 echo "fdt support       $fdt"
 echo "preadv support    $preadv"
 echo "fdatasync         $fdatasync"
@@ -4594,6 +4653,7 @@ echo "snappy support    $snappy"
 echo "bzip2 support     $bzip2"
 echo "NUMA host support $numa"
 echo "tcmalloc support  $tcmalloc"
+echo "LLVM support      $llvm"
 
 if test "$sdl_too_old" = "yes"; then
 echo "-> Your SDL version is too old - please upgrade to have SDL support"
@@ -5135,6 +5195,8 @@ fi
 
 if test "$tcg_interpreter" = "yes"; then
   QEMU_INCLUDES="-I\$(SRC_PATH)/tcg/tci $QEMU_INCLUDES"
+elif test "$tcg_llvm" = "yes"; then
+  QEMU_INCLUDES="-I\$(SRC_PATH)/tcg/llvm $QEMU_INCLUDES"
 elif test "$ARCH" = "sparc64" ; then
   QEMU_INCLUDES="-I\$(SRC_PATH)/tcg/sparc $QEMU_INCLUDES"
 elif test "$ARCH" = "s390x" ; then
@@ -5514,6 +5576,10 @@ for i in $ARCH $TARGET_BASE_ARCH ; do
   i386|x86_64|x32)
     echo "CONFIG_I386_DIS=y"  >> $config_target_mak
     echo "CONFIG_I386_DIS=y"  >> config-all-disas.mak
+  ;;
+  llvm)
+    echo "CONFIG_LLVM_DIS=y"  >> $config_target_mak
+    echo "CONFIG_LLVM_DIS=y"  >> config-all-disas.mak
   ;;
   ia64*)
     echo "CONFIG_IA64_DIS=y"  >> $config_target_mak
