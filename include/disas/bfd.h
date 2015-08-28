@@ -374,6 +374,7 @@ typedef struct disassemble_info {
 typedef int (*disassembler_ftype) (bfd_vma, disassemble_info *);
 
 int print_insn_tci(bfd_vma, disassemble_info*);
+int print_insn_llvm(bfd_vma, disassemble_info*);
 int print_insn_big_mips         (bfd_vma, disassemble_info*);
 int print_insn_little_mips      (bfd_vma, disassemble_info*);
 int print_insn_i386             (bfd_vma, disassemble_info*);

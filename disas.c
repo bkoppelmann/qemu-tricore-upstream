@@ -313,6 +313,8 @@ void disas(FILE *out, void *code, unsigned long size)
 #endif
 #if defined(CONFIG_TCG_INTERPRETER)
     print_insn = print_insn_tci;
+#elif defined (CONFIG_TCG_LLVM)
+    print_insn = print_insn_llvm;
 #elif defined(__i386__)
     s.info.mach = bfd_mach_i386_i386;
     print_insn = print_insn_i386;

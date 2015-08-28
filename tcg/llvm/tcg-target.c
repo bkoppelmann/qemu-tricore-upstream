@@ -24,6 +24,9 @@
 
 #include "tcg-be-ldst.h"
 
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include "llvm-c/Core.h"
 /* Marker for missing code. */
 #define TODO() \
     do { \
@@ -467,6 +470,15 @@ static void tci_out_label(TCGContext *s, TCGLabel *label)
     }
 }
 
+static void tcg_out_qemu_ld_slow_path(TCGContext *s, TCGLabelQemuLdst *lb)
+{
+}
+
+
+static void tcg_out_qemu_st_slow_path(TCGContext *s, TCGLabelQemuLdst *lb)
+{
+}
+
 static void tcg_out_ld(TCGContext *s, TCGType type, TCGReg ret, TCGReg arg1,
                        intptr_t arg2)
 {
@@ -539,7 +551,7 @@ static void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args,
                        const int *const_args)
 {
     uint8_t *old_code_ptr = s->code_ptr;
-
+    LLVMModuleCreateWithName("my_module");
     tcg_out_op_t(s, opc);
 
     switch (opc) {
