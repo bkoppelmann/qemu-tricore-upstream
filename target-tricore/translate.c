@@ -3250,6 +3250,25 @@ static inline bool use_goto_tb(DisasContext *ctx, target_ulong dest)
 #endif
 }
 
+static void gen_excp1(DisasContext *ctx, int exception, int error_code)
+{
+    TCGv tmp1, tmp2;
+    tmp1 = tcg_const_i32(exception);
+    tmp2 = tcg_const_i32(error_code);
+
+    gen_helper_excp(cpu_env, tmp1, tmp2);
+    ctx->bstate = BS_EXCP;
+
+    tcg_temp_free(tmp1);
+    tcg_temp_free(tmp2);
+}
+
+static void gen_excp(DisasContext *ctx, int exception, int error_code)
+{
+    gen_save_pc(ctx->pc);
+    gen_excp1(ctx, exception, error_code);
+}
+
 static inline void gen_goto_tb(DisasContext *ctx, int n, target_ulong dest)
 {
     if (use_goto_tb(ctx, dest)) {
@@ -3259,6 +3278,7 @@ static inline void gen_goto_tb(DisasContext *ctx, int n, target_ulong dest)
     } else {
         gen_save_pc(dest);
         if (ctx->singlestep_enabled) {
+            gen_excp1(ctx, EXCP_DEBUG, 0);
             /* raise exception debug */
         }
         tcg_gen_exit_tb(0);
@@ -3277,6 +3297,7 @@ static void generate_trap(DisasContext *ctx, int class, int tin)
     tcg_temp_free(classtemp);
     tcg_temp_free(tintemp);
 }
+
 
 static inline void gen_branch_cond(DisasContext *ctx, TCGCond cond, TCGv r1,
                                    TCGv r2, int16_t address)
@@ -3329,7 +3350,6 @@ static void gen_fret(DisasContext *ctx)
     tcg_gen_qemu_ld_tl(cpu_gpr_a[11], cpu_gpr_a[10], ctx->mem_idx, MO_LESL);
     tcg_gen_addi_tl(cpu_gpr_a[10], cpu_gpr_a[10], 4);
     tcg_gen_mov_tl(cpu_PC, temp);
-    tcg_gen_exit_tb(0);
     ctx->bstate = BS_BRANCH;
 
     tcg_temp_free(temp);
@@ -3417,12 +3437,10 @@ static void gen_compute_branch(DisasContext *ctx, uint32_t opc, int r1,
 /* SR-format jumps */
     case OPC1_16_SR_JI:
         tcg_gen_andi_tl(cpu_PC, cpu_gpr_a[r1], 0xfffffffe);
-        tcg_gen_exit_tb(0);
         break;
     case OPC2_32_SYS_RET:
     case OPC2_16_SR_RET:
         gen_helper_ret(cpu_env);
-        tcg_gen_exit_tb(0);
         break;
 /* B-format */
     case OPC1_32_B_CALLA:
@@ -3925,7 +3943,6 @@ static void decode_sr_system(CPUTriCoreState *env, DisasContext *ctx)
         break;
     case OPC2_16_SR_RFE:
         gen_helper_rfe(cpu_env);
-        tcg_gen_exit_tb(0);
         ctx->bstate = BS_BRANCH;
         break;
     case OPC2_16_SR_DEBUG:
@@ -6518,7 +6535,6 @@ static void decode_rr_idirect(CPUTriCoreState *env, DisasContext *ctx)
     default:
         generate_trap(ctx, TRAPC_INSN_ERR, TIN2_IOPC);
     }
-    tcg_gen_exit_tb(0);
     ctx->bstate = BS_BRANCH;
 }
 
@@ -8324,7 +8340,6 @@ static void decode_sys_interrupts(CPUTriCoreState *env, DisasContext *ctx)
         break;
     case OPC2_32_SYS_RFE:
         gen_helper_rfe(cpu_env);
-        tcg_gen_exit_tb(0);
         ctx->bstate = BS_BRANCH;
         break;
     case OPC2_32_SYS_RFM:
@@ -8337,7 +8352,6 @@ static void decode_sys_interrupts(CPUTriCoreState *env, DisasContext *ctx)
             tcg_gen_brcondi_tl(TCG_COND_NE, tmp, 1, l1);
             gen_helper_rfm(cpu_env);
             gen_set_label(l1);
-            tcg_gen_exit_tb(0);
             ctx->bstate = BS_BRANCH;
             tcg_temp_free(tmp);
         } else {
@@ -8746,7 +8760,7 @@ void gen_intermediate_code(CPUTriCoreState *env, struct TranslationBlock *tb)
     if (max_insns == 0) {
         max_insns = CF_COUNT_MASK;
     }
-    if (singlestep) {
+    if (cs->singlestep_enabled) {
         max_insns = 1;
     }
     if (max_insns > TCG_MAX_INSNS) {
@@ -8767,15 +8781,38 @@ void gen_intermediate_code(CPUTriCoreState *env, struct TranslationBlock *tb)
         tcg_gen_insn_start(ctx.pc);
         num_insns++;
 
+        if (unlikely(cpu_breakpoint_test(cs, ctx.pc, BP_ANY))) {
+            gen_excp(&ctx, EXCP_DEBUG, 0);
+            /* The address covered by the breakpoint must be included in
+               [tb->pc, tb->pc + tb->size) in order to for it to be
+               properly cleared -- thus we increment the PC here so that
+               the logic setting tb->size below does the right thing.  */
+            ctx.pc += 4;
+            break;
+        }
+
         ctx.opcode = cpu_ldl_code(env, ctx.pc);
         decode_opc(env, &ctx, 0);
 
         if (num_insns >= max_insns || tcg_op_buf_full()) {
             gen_save_pc(ctx.next_pc);
-            tcg_gen_exit_tb(0);
+            if (ctx.singlestep_enabled) {
+                gen_excp1(&ctx, EXCP_DEBUG, 0);
+            } else {
+                tcg_gen_exit_tb(0);
+            }
             break;
         }
         ctx.pc = ctx.next_pc;
+    }
+
+    if (ctx.bstate == BS_BRANCH) {
+        if (ctx.singlestep_enabled) {
+            printf("Excp Debug\n");
+            gen_excp1(&ctx, EXCP_DEBUG, 0);
+        } else {
+            tcg_gen_exit_tb(0);
+        }
     }
 
     gen_tb_end(tb, num_insns);

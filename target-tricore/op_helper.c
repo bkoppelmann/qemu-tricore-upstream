@@ -25,6 +25,16 @@
 
 /* Exception helpers */
 
+void QEMU_NORETURN helper_excp(CPUTriCoreState *env, int excp, int error)
+{
+    TriCoreCPU *cpu = tricore_env_get_cpu(env);
+    CPUState *cs = CPU(cpu);
+
+    cs->exception_index = excp;
+    env->error_code = error;
+    cpu_loop_exit(cs);
+}
+
 static void QEMU_NORETURN
 raise_exception_sync_internal(CPUTriCoreState *env, uint32_t class, int tin,
                               uintptr_t pc, uint32_t fcd_pc)
