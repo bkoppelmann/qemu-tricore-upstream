@@ -1619,7 +1619,6 @@ CpuInfoList *qmp_query_cpus(Error **errp)
         TriCoreCPU *tricore_cpu = TRICORE_CPU(cpu);
         CPUTriCoreState *env = &tricore_cpu->env;
 #endif
-
         cpu_synchronize_state(cpu);
 
         info = g_malloc0(sizeof(*info));
