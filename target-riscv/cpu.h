@@ -368,7 +368,16 @@ void riscv_cpu_list(FILE *f, fprintf_function cpu_fprintf);
 
 static inline int cpu_mmu_index(CPURISCVState *env, bool ifetch)
 {
-    return 0;
+    int mode = get_field(env->csr[NEW_CSR_MSTATUS], MSTATUS_PRV);
+
+    if (!ifetch && get_field(env->csr[NEW_CSR_MSTATUS], MSTATUS_MPRV)) {
+        mode = get_field(env->csr[NEW_CSR_MSTATUS], MSTATUS_PRV1);
+    }
+    if (get_field(env->csr[NEW_CSR_MSTATUS], MSTATUS_VM) == VM_MBARE) {
+        mode = PRV_M;
+    }
+
+    return mode;
 }
 
 #include "exec/cpu-all.h"
@@ -401,8 +410,8 @@ uint64_t cpu_riscv_read_instretw(CPURISCVState *env);
 void cpu_riscv_soft_irq(CPURISCVState *env, int irq, int level);
 
 /* helper.c */
-int riscv_cpu_handle_mmu_fault(CPUState *cpu, vaddr address, int rw,
-                              int mmu_idx);
+int riscv_cpu_handle_mmu_fault(CPUState *cpu, vaddr address,
+                               MMUAccessType access_type, int mmu_idx);
 #if !defined(CONFIG_USER_ONLY)
 hwaddr cpu_riscv_translate_address(CPURISCVState *env, target_ulong address,
                                        int rw);
