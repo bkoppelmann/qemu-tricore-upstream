@@ -27,6 +27,7 @@
 #include "exec/helper-proto.h"
 #include "exec/helper-gen.h"
 
+#include "instmap.h"
 
 /* global register indices */
 static TCGv_ptr cpu_env;
