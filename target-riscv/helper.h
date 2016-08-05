@@ -17,6 +17,9 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
+/* MULHSU helper */
+DEF_HELPER_3(mulhsu, tl, env, tl, tl)
+
 /* Special functions */
 #ifndef CONFIG_USER_ONLY
 DEF_HELPER_3(debug_print, void, env, tl, tl)

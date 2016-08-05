@@ -35,6 +35,14 @@ void helper_debug_print(CPURISCVState *env, target_ulong cpu_pc_deb,
             cpu_pc_deb, instruction, "DASM BAD RESULT\n");
 }
 
+target_ulong helper_mulhsu(CPURISCVState *env, target_ulong arg1,
+                          target_ulong arg2)
+{
+    int64_t a = arg1;
+    uint64_t b = arg2;
+    return (int64_t)((__int128_t)a * b >> 64);
+}
+
 /* called by qemu's softmmu to fill the qemu tlb */
 void tlb_fill(CPUState *cs, target_ulong addr, MMUAccessType access_type,
               int mmu_idx, uintptr_t retaddr)
