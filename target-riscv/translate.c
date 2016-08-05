@@ -87,6 +87,29 @@ static void kill_unknown(DisasContext *ctx, int excp)
     /* generate_exception(ctx, excp); */
     ctx->bstate = BS_STOP;
 }
+/* Wrapper for getting reg values - need to check of reg is zero since
+ * cpu_gpr[0] is not actually allocated
+ */
+static inline void gen_get_gpr(TCGv t, int reg_num)
+{
+    if (reg_num == 0) {
+        tcg_gen_movi_tl(t, 0);
+    } else {
+        tcg_gen_mov_tl(t, cpu_gpr[reg_num]);
+    }
+}
+
+/* Wrapper for setting reg values - need to check of reg is zero since
+ * cpu_gpr[0] is not actually allocated. this is more for safety purposes,
+ * since we usually avoid calling the OP_TYPE_gen function if we see a write to
+ * $zero
+ */
+static inline void gen_set_gpr(int reg_num_dst, TCGv t)
+{
+    if (reg_num_dst != 0) {
+        tcg_gen_mov_tl(cpu_gpr[reg_num_dst], t);
+    }
+}
 
 static inline bool use_goto_tb(DisasContext *ctx, target_ulong dest)
 {
@@ -120,10 +143,105 @@ static inline void gen_goto_tb(DisasContext *ctx, int n, target_ulong dest)
     }
 }
 
+static void gen_branch(DisasContext *ctx, uint32_t opc,
+                       int rs1, int rs2, int16_t bimm) {
+
+    /* TODO: misaligned insn (see jalr) */
+    TCGLabel *l = gen_new_label();
+    TCGv source1, source2;
+    source1 = tcg_temp_new();
+    source2 = tcg_temp_new();
+    gen_get_gpr(source1, rs1);
+    gen_get_gpr(source2, rs2);
+    target_ulong ubimm = (target_long)bimm; /* sign ext 16->64 bits */
+
+    switch (opc) {
+    case OPC_RISC_BEQ:
+        tcg_gen_brcond_tl(TCG_COND_EQ, source1, source2, l);
+        break;
+    case OPC_RISC_BNE:
+        tcg_gen_brcond_tl(TCG_COND_NE, source1, source2, l);
+        break;
+    case OPC_RISC_BLT:
+        tcg_gen_brcond_tl(TCG_COND_LT, source1, source2, l);
+        break;
+    case OPC_RISC_BGE:
+        tcg_gen_brcond_tl(TCG_COND_GE, source1, source2, l);
+        break;
+    case OPC_RISC_BLTU:
+        tcg_gen_brcond_tl(TCG_COND_LTU, source1, source2, l);
+        break;
+    case OPC_RISC_BGEU:
+        tcg_gen_brcond_tl(TCG_COND_GEU, source1, source2, l);
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    gen_goto_tb(ctx, 1, ctx->pc + 4); /* must use this for safety */
+
+    gen_set_label(l); /* branch taken */
+    gen_goto_tb(ctx, 0, ctx->pc + ubimm); /* must use this for safety */
+
+    tcg_temp_free(source1);
+    tcg_temp_free(source2);
+    ctx->bstate = BS_BRANCH;
+}
+
+static void gen_jalr(DisasContext *ctx, uint32_t opc, int rd, int rs1,
+                     int16_t imm)
+{
+    TCGLabel *misaligned = gen_new_label();
+    TCGLabel *done = gen_new_label();
+    target_long uimm = (target_long)imm; /* sign ext 16->64 bits */
+    TCGv t0, t1, t2, t3;
+    t0 = tcg_temp_local_new();
+    t1 = tcg_temp_local_new();
+    t2 = tcg_temp_local_new(); /* old_pc */
+    t3 = tcg_temp_local_new();
+
+    switch (opc) {
+
+    case OPC_RISC_JALR: /* CANNOT HAVE CHAINING WITH JALR */
+        gen_get_gpr(t0, rs1);
+        tcg_gen_addi_tl(t0, t0, uimm);
+        tcg_gen_andi_tl(t0, t0, 0xFFFFFFFFFFFFFFFEll);
+
+        tcg_gen_andi_tl(t3, t0, 0x2);
+        tcg_gen_movi_tl(t2, ctx->pc);
+
+        tcg_gen_brcondi_tl(TCG_COND_NE, t3, 0x0, misaligned);
+        tcg_gen_mov_tl(cpu_PC, t0);
+        tcg_gen_addi_tl(t1, t2, 4);
+        gen_set_gpr(rd, t1);
+        tcg_gen_br(done);
+
+        gen_set_label(misaligned);
+        /* generate_exception_mbadaddr(ctx, NEW_RISCV_EXCP_INST_ADDR_MIS); */
+
+        gen_set_label(done);
+        tcg_gen_exit_tb(0); /* exception or not, NO CHAINING FOR JALR */
+        ctx->bstate = BS_BRANCH;
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+
+    }
+    tcg_temp_free(t0);
+    tcg_temp_free(t1);
+    tcg_temp_free(t2);
+    tcg_temp_free(t3);
+
+}
+
 static void decode_opc(CPURISCVState *env, DisasContext *ctx)
 {
+    int rs1;
+    int rs2;
     int rd;
     uint32_t op;
+    int16_t imm;
     target_long ubimm;
 
     /* do not do misaligned address check here, address should never be
@@ -147,7 +265,10 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx)
     }
 
     op = MASK_OP_MAJOR(ctx->opcode);
+    rs1 = (ctx->opcode >> 15) & 0x1f;
+    rs2 = (ctx->opcode >> 20) & 0x1f;
     rd = (ctx->opcode >> 7) & 0x1f;
+    imm = (int16_t)(((int32_t)ctx->opcode) >> 20); /* sign extends */
 
 #ifdef RISCV_DEBUG_PRINT
     /* this will print a log similar to spike, should be left off unless
@@ -211,6 +332,13 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx)
             tcg_temp_free(nextpc);
             tcg_temp_free(testpc);
         }
+        break;
+    case OPC_RISC_JALR:
+        gen_jalr(ctx, MASK_OP_JALR(ctx->opcode), rd, rs1, imm);
+        break;
+    case OPC_RISC_BRANCH:
+        gen_branch(ctx, MASK_OP_BRANCH(ctx->opcode), rs1, rs2,
+                   GET_B_IMM(ctx->opcode));
         break;
     default:
         kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
