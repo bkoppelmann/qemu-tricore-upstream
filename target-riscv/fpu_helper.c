@@ -102,3 +102,42 @@ uint64_t helper_fmsub_d(CPURISCVState *env, uint64_t frs1, uint64_t frs2,
     return frs1;
 }
 
+uint64_t helper_fnmsub_s(CPURISCVState *env, uint64_t frs1, uint64_t frs2,
+                         uint64_t frs3, uint64_t rm)
+{
+    set_float_rounding_mode(RM, &env->fp_status);
+    frs1 = float32_muladd(frs1 ^ (uint32_t)INT32_MIN, frs2, frs3, 0,
+                          &env->fp_status);
+set_fp_exceptions();
+    return frs1;
+}
+
+uint64_t helper_fnmsub_d(CPURISCVState *env, uint64_t frs1, uint64_t frs2,
+                         uint64_t frs3, uint64_t rm)
+{
+    set_float_rounding_mode(RM, &env->fp_status);
+    frs1 = float64_muladd(frs1 ^ (uint64_t)INT64_MIN, frs2, frs3, 0,
+                          &env->fp_status);
+    set_fp_exceptions();
+    return frs1;
+}
+
+uint64_t helper_fnmadd_s(CPURISCVState *env, uint64_t frs1, uint64_t frs2,
+                         uint64_t frs3, uint64_t rm)
+{
+    set_float_rounding_mode(RM, &env->fp_status);
+    frs1 = float32_muladd(frs1 ^ (uint32_t)INT32_MIN, frs2,
+                          frs3 ^ (uint32_t)INT32_MIN, 0, &env->fp_status);
+    set_fp_exceptions();
+    return frs1;
+}
+
+uint64_t helper_fnmadd_d(CPURISCVState *env, uint64_t frs1, uint64_t frs2,
+                         uint64_t frs3, uint64_t rm)
+{
+    set_float_rounding_mode(RM, &env->fp_status);
+    frs1 = float64_muladd(frs1 ^ (uint64_t)INT64_MIN, frs2,
+                          frs3 ^ (uint64_t)INT64_MIN, 0, &env->fp_status);
+    set_fp_exceptions();
+    return frs1;
+}

@@ -24,6 +24,10 @@ DEF_HELPER_5(fmadd_s, tl, env, tl, tl, tl, tl)
 DEF_HELPER_5(fmadd_d, tl, env, tl, tl, tl, tl)
 DEF_HELPER_5(fmsub_s, tl, env, tl, tl, tl, tl)
 DEF_HELPER_5(fmsub_d, tl, env, tl, tl, tl, tl)
+DEF_HELPER_5(fnmsub_s, tl, env, tl, tl, tl, tl)
+DEF_HELPER_5(fnmsub_d, tl, env, tl, tl, tl, tl)
+DEF_HELPER_5(fnmadd_s, tl, env, tl, tl, tl, tl)
+DEF_HELPER_5(fnmadd_d, tl, env, tl, tl, tl, tl)
 
 /* Special functions */
 #ifndef CONFIG_USER_ONLY
