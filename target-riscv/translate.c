@@ -1212,6 +1212,53 @@ static void gen_fp_store(DisasContext *ctx, uint32_t opc,
     tcg_temp_free(dat);
 }
 
+static void gen_fp_fmadd(DisasContext *ctx, uint32_t opc,
+                         int rd, int rs1, int rs2, int rs3, int rm)
+{
+    TCGv rm_reg = tcg_temp_new();
+    tcg_gen_movi_tl(rm_reg, rm);
+
+    switch (opc) {
+
+    case OPC_RISC_FMADD_S:
+        gen_helper_fmadd_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2],
+                           cpu_fpr[rs3], rm_reg);
+        break;
+    case OPC_RISC_FMADD_D:
+        gen_helper_fmadd_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2],
+                           cpu_fpr[rs3], rm_reg);
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(rm_reg);
+
+}
+
+static void gen_fp_fmsub(DisasContext *ctx, uint32_t opc,
+                         int rd, int rs1, int rs2, int rs3, int rm)
+{
+    TCGv rm_reg = tcg_temp_new();
+    tcg_gen_movi_tl(rm_reg, rm);
+
+    switch (opc) {
+
+    case OPC_RISC_FMSUB_S:
+        gen_helper_fmsub_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2],
+                           cpu_fpr[rs3], rm_reg);
+        break;
+    case OPC_RISC_FMSUB_D:
+        gen_helper_fmsub_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2],
+                           cpu_fpr[rs3], rm_reg);
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(rm_reg);
+}
+
 static void decode_opc(CPURISCVState *env, DisasContext *ctx)
 {
     int rs1;
@@ -1357,6 +1404,14 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx)
     case OPC_RISC_FP_STORE:
         gen_fp_store(ctx, MASK_OP_FP_STORE(ctx->opcode), rs1, rs2,
                      GET_STORE_IMM(ctx->opcode));
+        break;
+    case OPC_RISC_FMADD:
+        gen_fp_fmadd(ctx, MASK_OP_FP_FMADD(ctx->opcode), rd, rs1, rs2,
+                     GET_RS3(ctx->opcode), GET_RM(ctx->opcode));
+        break;
+    case OPC_RISC_FMSUB:
+        gen_fp_fmsub(ctx, MASK_OP_FP_FMSUB(ctx->opcode), rd, rs1, rs2,
+                     GET_RS3(ctx->opcode), GET_RM(ctx->opcode));
         break;
     default:
         kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
@@ -1599,6 +1654,7 @@ RISCVCPU *cpu_riscv_init(const char *cpu_model)
     env->csr[NEW_CSR_MCPUID] = def->init_mcpuid_reg;
     object_property_set_bool(OBJECT(cpu), true, "realized", NULL);
 
+    set_default_nan_mode(1, &env->fp_status);
 
     return cpu;
 }

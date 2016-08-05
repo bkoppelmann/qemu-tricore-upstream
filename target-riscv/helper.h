@@ -19,6 +19,11 @@
  */
 /* MULHSU helper */
 DEF_HELPER_3(mulhsu, tl, env, tl, tl)
+/* Floating Point - fused */
+DEF_HELPER_5(fmadd_s, tl, env, tl, tl, tl, tl)
+DEF_HELPER_5(fmadd_d, tl, env, tl, tl, tl, tl)
+DEF_HELPER_5(fmsub_s, tl, env, tl, tl, tl, tl)
+DEF_HELPER_5(fmsub_d, tl, env, tl, tl, tl, tl)
 
 /* Special functions */
 #ifndef CONFIG_USER_ONLY
