@@ -188,6 +188,87 @@ static void gen_branch(DisasContext *ctx, uint32_t opc,
     ctx->bstate = BS_BRANCH;
 }
 
+static void gen_load(DisasContext *ctx, uint32_t opc,
+                     int rd, int rs1, int16_t imm)
+{
+
+    target_long uimm = (target_long)imm; /* sign ext 16->64 bits */
+
+    TCGv t0 = tcg_temp_new();
+    TCGv t1 = tcg_temp_new();
+
+    gen_get_gpr(t0, rs1);
+    tcg_gen_addi_tl(t0, t0, uimm);
+
+    switch (opc) {
+
+    case OPC_RISC_LB:
+        tcg_gen_qemu_ld_tl(t1, t0, ctx->mem_idx, MO_SB);
+        break;
+    case OPC_RISC_LH:
+        tcg_gen_qemu_ld_tl(t1, t0, ctx->mem_idx, MO_LESW);
+        break;
+    case OPC_RISC_LW:
+        tcg_gen_qemu_ld_tl(t1, t0, ctx->mem_idx, MO_LESL);
+        break;
+    case OPC_RISC_LD:
+        tcg_gen_qemu_ld_tl(t1, t0, ctx->mem_idx, MO_LEQ);
+        break;
+    case OPC_RISC_LBU:
+        tcg_gen_qemu_ld_tl(t1, t0, ctx->mem_idx, MO_UB);
+        break;
+    case OPC_RISC_LHU:
+        tcg_gen_qemu_ld_tl(t1, t0, ctx->mem_idx, MO_LEUW);
+        break;
+    case OPC_RISC_LWU:
+        tcg_gen_qemu_ld_tl(t1, t0, ctx->mem_idx, MO_LEUL);
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+
+    }
+
+    gen_set_gpr(rd, t1);
+    tcg_temp_free(t0);
+    tcg_temp_free(t1);
+}
+
+
+static void gen_store(DisasContext *ctx, uint32_t opc,
+                      int rs1, int rs2, int16_t imm)
+{
+    target_long uimm = (target_long)imm; /* sign ext 16->64 bits */
+
+    TCGv t0 = tcg_temp_new();
+    TCGv dat = tcg_temp_new();
+    gen_get_gpr(t0, rs1);
+    tcg_gen_addi_tl(t0, t0, uimm);
+    gen_get_gpr(dat, rs2);
+
+    switch (opc) {
+    case OPC_RISC_SB:
+        tcg_gen_qemu_st_tl(dat, t0, ctx->mem_idx, MO_UB);
+        break;
+    case OPC_RISC_SH:
+        tcg_gen_qemu_st_tl(dat, t0, ctx->mem_idx, MO_LEUW);
+        break;
+    case OPC_RISC_SW:
+        tcg_gen_qemu_st_tl(dat, t0, ctx->mem_idx, MO_LEUL);
+        break;
+    case OPC_RISC_SD:
+        tcg_gen_qemu_st_tl(dat, t0, ctx->mem_idx, MO_LEQ);
+        break;
+
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+
+    tcg_temp_free(t0);
+    tcg_temp_free(dat);
+}
+
 static void gen_jalr(DisasContext *ctx, uint32_t opc, int rd, int rs1,
                      int16_t imm)
 {
@@ -339,6 +420,13 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx)
     case OPC_RISC_BRANCH:
         gen_branch(ctx, MASK_OP_BRANCH(ctx->opcode), rs1, rs2,
                    GET_B_IMM(ctx->opcode));
+        break;
+    case OPC_RISC_LOAD:
+        gen_load(ctx, MASK_OP_LOAD(ctx->opcode), rd, rs1, imm);
+        break;
+    case OPC_RISC_STORE:
+        gen_store(ctx, MASK_OP_STORE(ctx->opcode), rs1, rs2,
+                  GET_STORE_IMM(ctx->opcode));
         break;
     default:
         kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
