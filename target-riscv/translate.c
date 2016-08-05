@@ -1156,6 +1156,62 @@ static void gen_atomic(DisasContext *ctx, uint32_t opc,
     tcg_temp_free(dat);
 }
 
+static void gen_fp_load(DisasContext *ctx, uint32_t opc,
+                      int rd, int rs1, int16_t imm)
+{
+    target_long uimm = (target_long)imm; /* sign ext 16->64 bits */
+
+    TCGv t0 = tcg_temp_new();
+    gen_get_gpr(t0, rs1);
+    tcg_gen_addi_tl(t0, t0, uimm);
+
+    switch (opc) {
+
+    case OPC_RISC_FLW:
+        tcg_gen_qemu_ld_tl(t0, t0, ctx->mem_idx, MO_LEUL);
+        break;
+    case OPC_RISC_FLD:
+        tcg_gen_qemu_ld_tl(t0, t0, ctx->mem_idx, MO_LEQ);
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+
+    }
+    tcg_gen_mov_tl(cpu_fpr[rd], t0); /* probably can just get rid of this and
+                                        store directly to cpu_fpr[rd] */
+    tcg_temp_free(t0);
+}
+
+static void gen_fp_store(DisasContext *ctx, uint32_t opc,
+                      int rs1, int rs2, int16_t imm)
+{
+    target_long uimm = (target_long)imm; /* sign ext 16->64 bits */
+
+    TCGv t0 = tcg_temp_new();
+    TCGv dat = tcg_temp_new();
+    gen_get_gpr(t0, rs1);
+    tcg_gen_addi_tl(t0, t0, uimm);
+    tcg_gen_mov_tl(dat, cpu_fpr[rs2]);
+
+    switch (opc) {
+
+    case OPC_RISC_FSW:
+        tcg_gen_qemu_st_tl(dat, t0, ctx->mem_idx, MO_LEUL);
+        break;
+    case OPC_RISC_FSD:
+        tcg_gen_qemu_st_tl(dat, t0, ctx->mem_idx, MO_LEQ);
+        break;
+
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+
+    tcg_temp_free(t0);
+    tcg_temp_free(dat);
+}
+
 static void decode_opc(CPURISCVState *env, DisasContext *ctx)
 {
     int rs1;
@@ -1294,6 +1350,13 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx)
         break;
     case OPC_RISC_ATOMIC:
         gen_atomic(ctx, MASK_OP_ATOMIC(ctx->opcode), rd, rs1, rs2);
+        break;
+    case OPC_RISC_FP_LOAD:
+        gen_fp_load(ctx, MASK_OP_FP_LOAD(ctx->opcode), rd, rs1, imm);
+        break;
+    case OPC_RISC_FP_STORE:
+        gen_fp_store(ctx, MASK_OP_FP_STORE(ctx->opcode), rs1, rs2,
+                     GET_STORE_IMM(ctx->opcode));
         break;
     default:
         kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
