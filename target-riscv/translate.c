@@ -88,8 +88,134 @@ static void kill_unknown(DisasContext *ctx, int excp)
     ctx->bstate = BS_STOP;
 }
 
+static inline bool use_goto_tb(DisasContext *ctx, target_ulong dest)
+{
+    if (unlikely(ctx->singlestep_enabled)) {
+        return false;
+    }
+
+#ifndef CONFIG_USER_ONLY
+    return (ctx->tb->pc & TARGET_PAGE_MASK) == (dest & TARGET_PAGE_MASK);
+#else
+    return true;
+#endif
+}
+
+static inline void gen_goto_tb(DisasContext *ctx, int n, target_ulong dest)
+{
+    if (use_goto_tb(ctx, dest)) {
+        /* we only allow direct chaining when the jump is to the same page
+           otherwise, we could produce incorrect chains when address spaces
+           change. see
+           http://lists.gnu.org/archive/html/qemu-devel/2007-06/msg00213.html */
+        tcg_gen_goto_tb(n);
+        tcg_gen_movi_tl(cpu_PC, dest);
+        tcg_gen_exit_tb((uintptr_t)ctx->tb + n);
+    } else {
+        tcg_gen_movi_tl(cpu_PC, dest);
+        if (ctx->singlestep_enabled) {
+            /* raise excp debug */
+        }
+        tcg_gen_exit_tb(0);
+    }
+}
+
 static void decode_opc(CPURISCVState *env, DisasContext *ctx)
 {
+    int rd;
+    uint32_t op;
+    target_long ubimm;
+
+    /* do not do misaligned address check here, address should never be
+       misaligned
+
+       instead, all control flow instructions check for themselves
+
+       this is because epc must be the address of the control flow instruction
+       that "caused" to the misaligned instruction access
+
+        we leave this check here for now, since not all control flow
+        instructions have been updated yet */
+
+    /* make sure instructions are on a word boundary */
+    if (unlikely(ctx->pc & 0x3)) {
+        printf("addr misaligned\n");
+        printf("misaligned instruction, not completely implemented for\
+                riscv\n");
+        exit(1);
+        return;
+    }
+
+    op = MASK_OP_MAJOR(ctx->opcode);
+    rd = (ctx->opcode >> 7) & 0x1f;
+
+#ifdef RISCV_DEBUG_PRINT
+    /* this will print a log similar to spike, should be left off unless
+       you're debugging QEMU */
+    int start = 1; /*0 && ctx->pc == 0x8ccac; */
+    TCGv print_helper_tmp = tcg_temp_local_new();
+    TCGv printpc = tcg_temp_local_new();
+    tcg_gen_movi_tl(print_helper_tmp, ctx->opcode);
+    tcg_gen_movi_tl(printpc, ctx->pc);
+
+    if (monitor_region || start) {
+        gen_helper_debug_print(cpu_env, printpc, print_helper_tmp);
+        monitor_region = 1;
+
+        /* can print some reg val too */
+        gen_helper_debug_print(cpu_env, cpu_fpr[28], cpu_fpr[28]);
+
+    }
+    tcg_temp_free(print_helper_tmp);
+    tcg_temp_free(printpc);
+#endif
+
+    switch (op) {
+    case OPC_RISC_LUI:
+        if (rd == 0) {
+            break; /* NOP */
+        }
+        tcg_gen_movi_tl(cpu_gpr[rd], (ctx->opcode & 0xFFFFF000));
+        tcg_gen_ext32s_tl(cpu_gpr[rd], cpu_gpr[rd]);
+        break;
+    case OPC_RISC_AUIPC:
+        if (rd == 0) {
+            break; /* NOP */
+        }
+        tcg_gen_movi_tl(cpu_gpr[rd], (ctx->opcode & 0xFFFFF000));
+        tcg_gen_ext32s_tl(cpu_gpr[rd], cpu_gpr[rd]);
+        tcg_gen_add_tl(cpu_gpr[rd], cpu_gpr[rd], tcg_const_tl(ctx->pc));
+        break;
+    case OPC_RISC_JAL: {
+            TCGv nextpc = tcg_temp_local_new();
+            TCGv testpc = tcg_temp_local_new();
+            TCGLabel *misaligned = gen_new_label();
+            TCGLabel *done = gen_new_label();
+            ubimm = (target_long) (GET_JAL_IMM(ctx->opcode));
+            tcg_gen_movi_tl(nextpc, ctx->pc + ubimm);
+            /* check misaligned: */
+            tcg_gen_andi_tl(testpc, nextpc, 0x3);
+            tcg_gen_brcondi_tl(TCG_COND_NE, testpc, 0x0, misaligned);
+            if (rd != 0) {
+                tcg_gen_movi_tl(cpu_gpr[rd], 4);
+                tcg_gen_addi_tl(cpu_gpr[rd], cpu_gpr[rd], ctx->pc);
+            }
+
+            gen_goto_tb(ctx, 0, ctx->pc + ubimm); /* must use this for safety */
+
+            tcg_gen_br(done);
+            gen_set_label(misaligned);
+            /* TODO: throw exception for misaligned case */
+            gen_set_label(done);
+            ctx->bstate = BS_BRANCH;
+            tcg_temp_free(nextpc);
+            tcg_temp_free(testpc);
+        }
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
 }
 
 void gen_intermediate_code(CPURISCVState *env, TranslationBlock *tb)
@@ -160,7 +286,7 @@ void gen_intermediate_code(CPURISCVState *env, TranslationBlock *tb)
 
     switch (ctx.bstate) {
     case BS_STOP:
-        /* gen_goto_tb(&ctx, 0, ctx.pc); */
+        gen_goto_tb(&ctx, 0, ctx.pc);
         break;
     case BS_NONE:
         /* DO NOT CHAIN. This is for END-OF-PAGE. See gen_goto_tb. */

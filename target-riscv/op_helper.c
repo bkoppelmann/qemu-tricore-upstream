@@ -23,6 +23,18 @@
 #include "qemu/host-utils.h"
 #include "exec/helper-proto.h"
 
+/*
+ * This is a debug print helper for printing trace.
+ * Currently calls spike-dasm, so very slow.
+ * Probably not useful unless you're debugging riscv-qemu
+ */
+void helper_debug_print(CPURISCVState *env, target_ulong cpu_pc_deb,
+        target_ulong instruction)
+{
+    fprintf(stderr, ": core   0: 0x" TARGET_FMT_lx " (0x%08lx) %s",
+            cpu_pc_deb, instruction, "DASM BAD RESULT\n");
+}
+
 /* called by qemu's softmmu to fill the qemu tlb */
 void tlb_fill(CPUState *cs, target_ulong addr, MMUAccessType access_type,
               int mmu_idx, uintptr_t retaddr)

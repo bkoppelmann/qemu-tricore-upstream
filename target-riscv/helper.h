@@ -17,3 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
+/* Special functions */
+#ifndef CONFIG_USER_ONLY
+DEF_HELPER_3(debug_print, void, env, tl, tl)
+#endif /* !CONFIG_USER_ONLY */
