@@ -230,3 +230,28 @@ int riscv_cpu_handle_mmu_fault(CPUState *cs, vaddr address,
     }
     return ret;
 }
+
+target_ulong push_priv_stack(target_ulong start_mstatus)
+{
+    target_ulong s = start_mstatus;
+    s = set_field(s, MSTATUS_PRV2, get_field(start_mstatus, MSTATUS_PRV1));
+    s = set_field(s, MSTATUS_IE2, get_field(start_mstatus, MSTATUS_IE1));
+    s = set_field(s, MSTATUS_PRV1, get_field(start_mstatus, MSTATUS_PRV));
+    s = set_field(s, MSTATUS_IE1, get_field(start_mstatus, MSTATUS_IE));
+    s = set_field(s, MSTATUS_PRV, PRV_M);
+    s = set_field(s, MSTATUS_MPRV, 0);
+    s = set_field(s, MSTATUS_IE, 0);
+    return s;
+}
+
+target_ulong pop_priv_stack(target_ulong start_mstatus)
+{
+    target_ulong s = start_mstatus;
+    s = set_field(s, MSTATUS_PRV, get_field(start_mstatus, MSTATUS_PRV1));
+    s = set_field(s, MSTATUS_IE, get_field(start_mstatus, MSTATUS_IE1));
+    s = set_field(s, MSTATUS_PRV1, get_field(start_mstatus, MSTATUS_PRV2));
+    s = set_field(s, MSTATUS_IE1, get_field(start_mstatus, MSTATUS_IE2));
+    s = set_field(s, MSTATUS_PRV2, PRV_U);
+    s = set_field(s, MSTATUS_IE2, 1);
+    return s;
+}

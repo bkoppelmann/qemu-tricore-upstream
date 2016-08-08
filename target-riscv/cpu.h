@@ -380,6 +380,27 @@ static inline int cpu_mmu_index(CPURISCVState *env, bool ifetch)
     return mode;
 }
 
+static const char * const riscv_excp_names[12] = {
+    "Instruction Address Misaligned",
+    "Instruction Access Fault",
+    "Illegal Instruction",
+    "Breakpoint",
+    "Load Address Misaligned",
+    "Load Access Fault",
+    "Store/AMO Address Misaligned",
+    "Store/AMO Access Fault",
+    "User ECALL",
+    "Supervisor ECALL",
+    "Hypervisor ECALL",
+    "Machine ECALL",
+};
+
+static const char * const riscv_interrupt_names[3] = {
+    "Soft interrupt",
+    "Timer interrupt",
+    "Host interrupt"
+};
+
 #include "exec/cpu-all.h"
 
 void riscv_tcg_init(void);
