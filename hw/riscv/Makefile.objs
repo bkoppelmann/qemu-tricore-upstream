@@ -1,2 +1,2 @@
-obj-y += riscv_int.o
+obj-y += cputimer.o riscv_int.o
 

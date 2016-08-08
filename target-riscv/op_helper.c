@@ -104,7 +104,7 @@ inline void csr_write_helper(CPURISCVState *env, target_ulong val_to_write,
         /* this implementation ignores writes to MTIME */
         break;
     case NEW_CSR_TIMEW:
-        /* cpu_riscv_store_timew(env, val_to_write); */
+        cpu_riscv_store_timew(env, val_to_write);
         break;
     case NEW_CSR_TIMEHW:
         fprintf(stderr, "CSR_TIMEHW unsupported on RV64I\n");
@@ -112,7 +112,7 @@ inline void csr_write_helper(CPURISCVState *env, target_ulong val_to_write,
         break;
     case NEW_CSR_CYCLEW:
     case NEW_CSR_INSTRETW:
-        /* cpu_riscv_store_instretw(env, val_to_write); */
+        cpu_riscv_store_instretw(env, val_to_write);
         break;
     case NEW_CSR_CYCLEHW:
     case NEW_CSR_INSTRETHW:
@@ -251,7 +251,7 @@ inline void csr_write_helper(CPURISCVState *env, target_ulong val_to_write,
         break;
     case NEW_CSR_MTIMECMP:
         /* NOTE: clearing bit in MIP handled in cpu_riscv_store_compare */
-        /* cpu_riscv_store_compare(env, val_to_write); */
+        cpu_riscv_store_compare(env, val_to_write);
         break;
     case NEW_CSR_MTOHOST:
         fprintf(stderr, "Write to mtohost should not be handled here\n");
@@ -285,12 +285,10 @@ inline target_ulong csr_read_helper(CPURISCVState *env, target_ulong csrno)
         return (env->csr[NEW_CSR_FFLAGS] << FSR_AEXC_SHIFT) |
                (env->csr[NEW_CSR_FRM] << FSR_RD_SHIFT);
     case NEW_CSR_MTIME:
-        /* return cpu_riscv_read_mtime(env); */
-        return 0;
+        return cpu_riscv_read_mtime(env);
     case NEW_CSR_STIME:
     case NEW_CSR_STIMEW:
-        /* return cpu_riscv_read_stime(env); */
-        return 0;
+        return cpu_riscv_read_stime(env);
     case NEW_CSR_MTIMEH:
     case NEW_CSR_STIMEH:
     case NEW_CSR_STIMEHW:
@@ -298,13 +296,12 @@ inline target_ulong csr_read_helper(CPURISCVState *env, target_ulong csrno)
         exit(1);
     case NEW_CSR_TIME:
     case NEW_CSR_TIMEW:
-        /* return cpu_riscv_read_time(env); */
-        return 0;
+        return cpu_riscv_read_time(env);
     case NEW_CSR_CYCLE:
     case NEW_CSR_CYCLEW:
     case NEW_CSR_INSTRET:
     case NEW_CSR_INSTRETW:
-        /* return cpu_riscv_read_instretw(env); */
+        return cpu_riscv_read_instretw(env);
         return 0;
     case NEW_CSR_TIMEH:
     case NEW_CSR_TIMEHW:
