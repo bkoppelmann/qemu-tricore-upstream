@@ -1,3 +1,4 @@
 obj-y += cputimer.o riscv_int.o
 obj-y += htif/htif.o
 obj-y += htif/frontend.o
+obj-y += softint.o
