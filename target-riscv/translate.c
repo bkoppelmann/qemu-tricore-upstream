@@ -1181,11 +1181,61 @@ static void gen_atomic(DisasContext *ctx, uint32_t opc,
     tcg_temp_free(dat);
 }
 
+static void gen_csr_htif(DisasContext *ctx, uint32_t opc, uint64_t addr, int rd,
+                         int rs1)
+{
+    TCGv source1, csr_store, htif_addr;
+    source1 = tcg_temp_new();
+    csr_store = tcg_temp_new();
+    htif_addr = tcg_temp_new();
+    gen_get_gpr(source1, rs1); /* load rs1 val */
+    tcg_gen_movi_tl(htif_addr, addr);
+    tcg_gen_qemu_ld64(csr_store, htif_addr, ctx->mem_idx); /* get htif
+                                                              "reg" val */
+    switch (opc) {
+    case OPC_RISC_CSRRW:
+        break;
+    case OPC_RISC_CSRRS:
+        tcg_gen_or_tl(source1, csr_store, source1);
+        break;
+    case OPC_RISC_CSRRC:
+        tcg_gen_not_tl(source1, source1);
+        tcg_gen_and_tl(source1, csr_store, source1);
+        break;
+    case OPC_RISC_CSRRWI:
+        tcg_gen_movi_tl(source1, rs1);
+        break;
+    case OPC_RISC_CSRRSI:
+        tcg_gen_ori_tl(source1, csr_store, rs1);
+        break;
+    case OPC_RISC_CSRRCI:
+        tcg_gen_andi_tl(source1, csr_store, ~((uint64_t)rs1));
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+
+    }
+    tcg_gen_qemu_st64(source1, htif_addr, ctx->mem_idx);
+    gen_set_gpr(rd, csr_store);
+    tcg_temp_free(source1);
+    tcg_temp_free(csr_store);
+    tcg_temp_free(htif_addr);
+}
+
 static void gen_system(DisasContext *ctx, uint32_t opc,
                       int rd, int rs1, int csr)
 {
     /* get index into csr array */
     int backup_csr = csr;
+
+    if (csr == NEW_CSR_MTOHOST) {
+        gen_csr_htif(ctx, opc, 0xFFFFFFFFF0000000L, rd, rs1);
+        return;
+    } else if (csr == NEW_CSR_MFROMHOST) {
+        gen_csr_htif(ctx, opc, 0xFFFFFFFFF0000008L, rd, rs1);
+        return;
+    }
 
     TCGv source1, csr_store, dest;
     source1 = tcg_temp_new();
