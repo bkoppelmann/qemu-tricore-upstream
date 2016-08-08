@@ -22,6 +22,21 @@
 
 #if !defined(CONFIG_USER_ONLY)
 
+bool riscv_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
+{
+    if (interrupt_request & CPU_INTERRUPT_HARD) {
+        RISCVCPU *cpu = RISCV_CPU(cs);
+        CPURISCVState *env = &cpu->env;
+        int interruptno = cpu_riscv_hw_interrupts_pending(env);
+        if (interruptno + 1) {
+            cs->exception_index = 0x70000000U | interruptno;
+            riscv_cpu_do_interrupt(cs);
+            return true;
+        }
+    }
+    return false;
+}
+
 /* get_physical_address - get the physical address for this virtual address
  *
  * Do a page table walk to obtain the physical address corresponding to a
@@ -254,4 +269,72 @@ target_ulong pop_priv_stack(target_ulong start_mstatus)
     s = set_field(s, MSTATUS_PRV2, PRV_U);
     s = set_field(s, MSTATUS_IE2, 1);
     return s;
+}
+
+void riscv_cpu_do_interrupt(CPUState *cs)
+{
+    RISCVCPU *cpu = RISCV_CPU(cs);
+    CPURISCVState *env = &cpu->env;
+
+    #ifdef RISCV_DEBUG_INTERRUPT
+    if (cs->exception_index & 0x70000000) {
+        fprintf(stderr, "core   0: exception trap_%s, epc 0x%016lx\n",
+                riscv_interrupt_names[cs->exception_index & 0x0fffffff],
+                env->PC);
+    } else {
+        fprintf(stderr, "core   0: exception trap_%s, epc 0x%016lx\n",
+                riscv_excp_names[cs->exception_index], env->PC);
+    }
+    #endif
+
+    /* Store original PC to epc reg */
+    /* This is correct because the env->PC value visible here is */
+    /* actually the correct value, unlike other places where env->PC */
+    /* may be used. */
+    env->csr[NEW_CSR_MEPC] = env->PC;
+
+    /* set PC to handler */
+    env->PC = DEFAULT_MTVEC + 0x40 * get_field(env->csr[NEW_CSR_MSTATUS],
+                                               MSTATUS_PRV);
+
+
+    /* Store Cause in CSR_CAUSE. this comes from cs->exception_index */
+    if (cs->exception_index & (0x70000000)) {
+        /* hacky for now. the MSB (bit 63) indicates interrupt
+           but cs->exception index is only 32 bits wide */
+        env->csr[NEW_CSR_MCAUSE] = cs->exception_index & 0x0FFFFFFF;
+        env->csr[NEW_CSR_MCAUSE] |= (1L << 63);
+
+    } else {
+        /* fixup User ECALL -> correct priv ECALL */
+        if (cs->exception_index == NEW_RISCV_EXCP_U_ECALL) {
+            switch (get_field(env->csr[NEW_CSR_MSTATUS], MSTATUS_PRV)) {
+            case PRV_U:
+                env->csr[NEW_CSR_MCAUSE] = NEW_RISCV_EXCP_U_ECALL;
+                break;
+            case PRV_S:
+                env->csr[NEW_CSR_MCAUSE] = NEW_RISCV_EXCP_S_ECALL;
+                break;
+            case PRV_H:
+                env->csr[NEW_CSR_MCAUSE] = NEW_RISCV_EXCP_H_ECALL;
+                break;
+            case PRV_M:
+                env->csr[NEW_CSR_MCAUSE] = NEW_RISCV_EXCP_M_ECALL;
+                break;
+            }
+        } else {
+            env->csr[NEW_CSR_MCAUSE] = cs->exception_index;
+        }
+    }
+
+    /* handle stack */
+    target_ulong next_mstatus = push_priv_stack(env->csr[NEW_CSR_MSTATUS]);
+    csr_write_helper(env, next_mstatus, NEW_CSR_MSTATUS);
+
+    /* TODO: yield load reservation */
+
+    /* NOTE: CSR_BADVADDR should be set from the handler that
+             raises the exception */
+
+    cs->exception_index = EXCP_NONE; /* mark handled to qemu */
 }

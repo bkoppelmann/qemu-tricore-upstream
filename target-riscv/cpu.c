@@ -38,7 +38,18 @@ static void riscv_cpu_synchronize_from_tb(CPUState *cs, TranslationBlock *tb)
 
 static bool riscv_cpu_has_work(CPUState *cs)
 {
-    return true;
+    RISCVCPU *cpu = RISCV_CPU(cs);
+    CPURISCVState *env = &cpu->env;
+    bool has_work = false;
+
+    if (cs->interrupt_request & CPU_INTERRUPT_HARD) {
+        int interruptno = cpu_riscv_hw_interrupts_pending(env);
+        if (interruptno + 1) {
+            has_work = true;
+        }
+    }
+
+    return has_work;
 }
 
 static void riscv_cpu_reset(CPUState *s)
@@ -94,6 +105,8 @@ static void riscv_cpu_class_init(ObjectClass *c, void *data)
     cc->reset = riscv_cpu_reset;
 
     cc->has_work = riscv_cpu_has_work;
+    cc->do_interrupt = riscv_cpu_do_interrupt;
+    cc->cpu_exec_interrupt = riscv_cpu_exec_interrupt;
     cc->dump_state = riscv_cpu_dump_state;
     cc->set_pc = riscv_cpu_set_pc;
     cc->synchronize_from_tb = riscv_cpu_synchronize_from_tb;

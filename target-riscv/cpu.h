@@ -401,6 +401,78 @@ static const char * const riscv_interrupt_names[3] = {
     "Host interrupt"
 };
 
+/*
+ * Return RISC-V IRQ number if an interrupt should be taken, else -1.
+ * Used in cpu-exec.c
+ */
+static inline int cpu_riscv_hw_interrupts_pending(CPURISCVState *env)
+{
+
+    int priv = get_field(env->csr[NEW_CSR_MSTATUS], MSTATUS_PRV);
+    int ie = get_field(env->csr[NEW_CSR_MSTATUS], MSTATUS_IE);
+    target_ulong interrupts = env->csr[NEW_CSR_MIE] & env->csr[NEW_CSR_MIP];
+
+    #ifdef RISCV_DEBUG_PRINT
+    printf("checking interrupts: ie %d, priv %d, interrupts %ld\n", ie, priv,
+            interrupts);
+    #endif
+
+    if (priv < PRV_M || (priv == PRV_M && ie)) {
+        if (interrupts & MIP_MSIP) {
+            #ifdef RISCV_DEBUG_PRINT
+            fprintf(stderr, "taking soft interrupt M\n");
+            #endif
+
+            /* no irq to lower, that is done by the CPU */
+            return IRQ_SOFT;
+        }
+
+        if (interrupts & MIP_MTIP) {
+            #ifdef RISCV_DEBUG_PRINT
+            fprintf(stderr, "taking timer interrupt M\n");
+            #endif
+
+            /* we're handing it to the cpu now, so get rid of the qemu irq */
+            qemu_irq_lower(env->irq[7]); /* get rid of the irq request */
+            return IRQ_TIMER;
+        }
+
+        if (env->csr[NEW_CSR_MFROMHOST]) {
+            #ifdef RISCV_DEBUG_PRINT
+            fprintf(stderr, "taking host interrupt\n");
+            #endif
+
+            /* we're handing it to the cpu now, so get rid of the qemu irq */
+            qemu_irq_lower(env->irq[4]); /* get rid of the irq request */
+            return IRQ_HOST;
+        }
+
+    }
+
+    if (priv < PRV_S || (priv == PRV_S && ie)) {
+        if (interrupts & MIP_SSIP) {
+            #ifdef RISCV_DEBUG_PRINT
+            fprintf(stderr, "taking soft interrupt S\n");
+            #endif
+
+            /* no irq to lower, that is done by the CPU */
+            return IRQ_SOFT;
+        }
+
+        if (interrupts & MIP_STIP) {
+            #ifdef RISCV_DEBUG_PRINT
+            fprintf(stderr, "taking timer interrupt S\n");
+            #endif
+
+            /* no irq to lower, that is done by the CPU */
+            return IRQ_TIMER;
+        }
+    }
+
+    /* indicates no pending interrupt to handler in cpu-exec.c */
+    return -1;
+}
+
 #include "exec/cpu-all.h"
 
 void riscv_tcg_init(void);

@@ -283,7 +283,7 @@ inline target_ulong csr_read_helper(CPURISCVState *env, target_ulong csrno)
         return env->csr[NEW_CSR_FRM];
     case NEW_CSR_FCSR:
         return (env->csr[NEW_CSR_FFLAGS] << FSR_AEXC_SHIFT) |
-            (env->csr[NEW_CSR_FRM] << FSR_RD_SHIFT);
+               (env->csr[NEW_CSR_FRM] << FSR_RD_SHIFT);
     case NEW_CSR_MTIME:
         /* return cpu_riscv_read_mtime(env); */
         return 0;
