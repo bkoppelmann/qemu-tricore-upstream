@@ -1,0 +1,2 @@
+obj-y += riscv_int.o
+
