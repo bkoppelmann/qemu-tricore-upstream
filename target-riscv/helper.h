@@ -17,6 +17,12 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
+/* Exceptions */
+DEF_HELPER_2(raise_exception, noreturn, env, i32)
+DEF_HELPER_1(raise_exception_debug, noreturn, env)
+DEF_HELPER_3(raise_exception_err, noreturn, env, i32, tl)
+DEF_HELPER_3(raise_exception_mbadaddr, noreturn, env, i32, tl)
+
 /* MULHSU helper */
 DEF_HELPER_3(mulhsu, tl, env, tl, tl)
 /* Floating Point - fused */
@@ -82,4 +88,5 @@ DEF_HELPER_2(fclass_d, tl, env, tl)
 /* Special functions */
 #ifndef CONFIG_USER_ONLY
 DEF_HELPER_3(debug_print, void, env, tl, tl)
+DEF_HELPER_1(fence_i, void, env)
 #endif /* !CONFIG_USER_ONLY */

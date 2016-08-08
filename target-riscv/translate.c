@@ -82,11 +82,36 @@ static const char * const fpr_regnames[] = {
         }                                                                     \
     } while (0)
 
+static inline void generate_exception(DisasContext *ctx, int excp)
+{
+    tcg_gen_movi_tl(cpu_PC, ctx->pc);
+    TCGv_i32 helper_tmp = tcg_const_i32(excp);
+    gen_helper_raise_exception(cpu_env, helper_tmp);
+    tcg_temp_free_i32(helper_tmp);
+}
+
+static inline void generate_exception_mbadaddr(DisasContext *ctx, int excp)
+{
+    tcg_gen_movi_tl(cpu_PC, ctx->pc);
+    TCGv_i32 helper_tmp = tcg_const_i32(excp);
+    gen_helper_raise_exception_mbadaddr(cpu_env, helper_tmp, cpu_PC);
+    tcg_temp_free_i32(helper_tmp);
+}
+
+static inline void generate_exception_err(DisasContext *ctx, int excp)
+{
+    tcg_gen_movi_tl(cpu_PC, ctx->pc);
+    TCGv_i32 helper_tmp = tcg_const_i32(excp);
+    gen_helper_raise_exception_err(cpu_env, helper_tmp, cpu_PC);
+    tcg_temp_free_i32(helper_tmp);
+}
+
 static void kill_unknown(DisasContext *ctx, int excp)
 {
-    /* generate_exception(ctx, excp); */
+    generate_exception(ctx, excp);
     ctx->bstate = BS_STOP;
 }
+
 /* Wrapper for getting reg values - need to check of reg is zero since
  * cpu_gpr[0] is not actually allocated
  */
@@ -816,7 +841,7 @@ static void gen_jalr(DisasContext *ctx, uint32_t opc, int rd, int rs1,
         tcg_gen_br(done);
 
         gen_set_label(misaligned);
-        /* generate_exception_mbadaddr(ctx, NEW_RISCV_EXCP_INST_ADDR_MIS); */
+        generate_exception_mbadaddr(ctx, NEW_RISCV_EXCP_INST_ADDR_MIS);
 
         gen_set_label(done);
         tcg_gen_exit_tb(0); /* exception or not, NO CHAINING FOR JALR */
@@ -1451,7 +1476,7 @@ static void gen_fp_arith(DisasContext *ctx, uint32_t opc,
             gen_helper_fsgnjx_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1],
                                 cpu_fpr[rs2]);
         } else {
-            /* kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST); */
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
         }
         break;
     case OPC_RISC_FMIN_D:
@@ -1461,21 +1486,21 @@ static void gen_fp_arith(DisasContext *ctx, uint32_t opc,
         } else if (rm == 0x1) {
             gen_helper_fmax_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
         } else {
-            /* kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST); */
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
         }
         break;
     case OPC_RISC_FCVT_S_D:
         if (rs2 == 0x1) {
             gen_helper_fcvt_s_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
         } else {
-            /* kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST); */
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
         }
         break;
     case OPC_RISC_FCVT_D_S:
         if (rs2 == 0x0) {
             gen_helper_fcvt_d_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
         } else {
-            /* kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST); */
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
         }
         break;
     case OPC_RISC_FSQRT_D:
@@ -1490,7 +1515,7 @@ static void gen_fp_arith(DisasContext *ctx, uint32_t opc,
         } else if (rm == 0x2) {
             gen_helper_feq_d(write_int_rd, cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
         } else {
-            /* kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST); */
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
         }
         gen_set_gpr(rd, write_int_rd);
         break;
@@ -1505,7 +1530,7 @@ static void gen_fp_arith(DisasContext *ctx, uint32_t opc,
         } else if (rs2 == 0x3) {
             gen_helper_fcvt_lu_d(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
         } else {
-            /* kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST); */
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
         }
         gen_set_gpr(rd, write_int_rd);
         break;
@@ -1521,7 +1546,7 @@ static void gen_fp_arith(DisasContext *ctx, uint32_t opc,
         } else if (rs2 == 0x3) {
             gen_helper_fcvt_d_lu(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
         } else {
-            /* kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST); */
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
         }
         break;
     case OPC_RISC_FMV_X_D:
@@ -1531,7 +1556,7 @@ static void gen_fp_arith(DisasContext *ctx, uint32_t opc,
         } else if (rm == 0x1) {
             gen_helper_fclass_d(write_int_rd, cpu_env, cpu_fpr[rs1]);
         } else {
-            /* kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST); */
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
         }
         gen_set_gpr(rd, write_int_rd);
         break;
@@ -1682,6 +1707,16 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx)
             break; /* NOP */
         }
         gen_arith_w(ctx, MASK_OP_ARITH_W(ctx->opcode), rd, rs1, rs2);
+        break;
+    case OPC_RISC_FENCE:
+        /* standard fence is nop
+           fence_i flushes TB (like an icache): */
+        if (ctx->opcode & 0x1000) { /* FENCE_I */
+            gen_helper_fence_i(cpu_env);
+            tcg_gen_movi_tl(cpu_PC, ctx->pc + 4);
+            tcg_gen_exit_tb(0); /* no chaining */
+            ctx->bstate = BS_BRANCH;
+        }
         break;
     case OPC_RISC_ATOMIC:
         gen_atomic(ctx, MASK_OP_ATOMIC(ctx->opcode), rd, rs1, rs2);
