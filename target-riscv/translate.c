@@ -1181,6 +1181,145 @@ static void gen_atomic(DisasContext *ctx, uint32_t opc,
     tcg_temp_free(dat);
 }
 
+static void gen_system(DisasContext *ctx, uint32_t opc,
+                      int rd, int rs1, int csr)
+{
+    /* get index into csr array */
+    int backup_csr = csr;
+
+    TCGv source1, csr_store, dest;
+    source1 = tcg_temp_new();
+    csr_store = tcg_temp_new();
+    dest = tcg_temp_new();
+    gen_get_gpr(source1, rs1);
+    tcg_gen_movi_tl(csr_store, csr); /* copy into temp reg to feed to helper */
+
+    switch (opc) {
+    case OPC_RISC_ECALL:
+        switch (backup_csr) {
+        case 0x0: /* ECALL */
+            /* always generates U-level ECALL, fixed in do_interrupt handler */
+            generate_exception(ctx, NEW_RISCV_EXCP_U_ECALL);
+            tcg_gen_exit_tb(0); /* no chaining */
+            ctx->bstate = BS_BRANCH;
+            break;
+        case 0x1: /* EBREAK */
+            generate_exception(ctx, NEW_RISCV_EXCP_BREAKPOINT);
+            tcg_gen_exit_tb(0); /* no chaining */
+            ctx->bstate = BS_BRANCH;
+            break;
+        case 0x100: /* ERET */
+            /* temporarily added second cpu_PC for debug */
+            tcg_gen_movi_tl(cpu_PC, ctx->pc);
+            gen_helper_sret(cpu_PC, cpu_env, cpu_PC);
+            tcg_gen_exit_tb(0); /* no chaining */
+            ctx->bstate = BS_BRANCH;
+            break;
+        case 0x305: /* MRTS */
+            tcg_gen_movi_tl(cpu_PC, ctx->pc); /* mrts helper may cause
+                                                 misaligned exception */
+            gen_helper_mrts(cpu_PC, cpu_env, cpu_PC);
+            tcg_gen_exit_tb(0); /* no chaining */
+            ctx->bstate = BS_BRANCH;
+            break;
+        case 0x306: /* MRTH */
+            printf("SYSTEM INST NOT YET IMPLEMENTED 0x%x\n", backup_csr);
+            exit(1);
+            break;
+        case 0x205: /* HRTS */
+            printf("SYSTEM INST NOT YET IMPLEMENTED 0x%x\n", backup_csr);
+            exit(1);
+            break;
+        case 0x102: /* WFI */
+            /* nop for now, as in spike */
+            break;
+        case 0x101: /* SFENCE.VM */
+            gen_helper_tlb_flush(cpu_env);
+            break;
+        default:
+            kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+        break;
+    case OPC_RISC_CSRRW:
+        tcg_gen_movi_tl(cpu_PC, ctx->pc);
+        gen_helper_csrrw(dest, cpu_env, source1, csr_store, cpu_PC);
+        gen_set_gpr(rd, dest);
+        /* end tb since we may be changing priv modes */
+        tcg_gen_movi_tl(cpu_PC, ctx->pc + 4);
+        tcg_gen_exit_tb(0); /* no chaining */
+        ctx->bstate = BS_BRANCH;
+        break;
+    case OPC_RISC_CSRRS:
+        tcg_gen_movi_tl(cpu_PC, ctx->pc);
+        gen_helper_csrrs(dest, cpu_env, source1, csr_store, cpu_PC);
+        gen_set_gpr(rd, dest);
+        /* end tb since we may be changing priv modes */
+        tcg_gen_movi_tl(cpu_PC, ctx->pc + 4);
+        tcg_gen_exit_tb(0); /* no chaining */
+        ctx->bstate = BS_BRANCH;
+        break;
+    case OPC_RISC_CSRRC:
+        tcg_gen_movi_tl(cpu_PC, ctx->pc);
+        gen_helper_csrrc(dest, cpu_env, source1, csr_store, cpu_PC);
+        gen_set_gpr(rd, dest);
+        /* end tb since we may be changing priv modes */
+        tcg_gen_movi_tl(cpu_PC, ctx->pc + 4);
+        tcg_gen_exit_tb(0); /* no chaining */
+        ctx->bstate = BS_BRANCH;
+        break;
+    case OPC_RISC_CSRRWI:
+        {
+            tcg_gen_movi_tl(cpu_PC, ctx->pc);
+            TCGv imm_rs1 = tcg_temp_new();
+            tcg_gen_movi_tl(imm_rs1, rs1);
+            gen_helper_csrrw(dest, cpu_env, imm_rs1, csr_store, cpu_PC);
+            gen_set_gpr(rd, dest);
+            tcg_temp_free(imm_rs1);
+            /* end tb since we may be changing priv modes */
+            tcg_gen_movi_tl(cpu_PC, ctx->pc + 4);
+            tcg_gen_exit_tb(0); /* no chaining */
+            ctx->bstate = BS_BRANCH;
+        }
+        break;
+    case OPC_RISC_CSRRSI:
+        {
+            tcg_gen_movi_tl(cpu_PC, ctx->pc);
+            TCGv imm_rs1 = tcg_temp_new();
+            tcg_gen_movi_tl(imm_rs1, rs1);
+            gen_helper_csrrsi(dest, cpu_env, imm_rs1, csr_store, cpu_PC);
+            gen_set_gpr(rd, dest);
+            tcg_temp_free(imm_rs1);
+            /* end tb since we may be changing priv modes */
+            tcg_gen_movi_tl(cpu_PC, ctx->pc + 4);
+            tcg_gen_exit_tb(0); /* no chaining */
+            ctx->bstate = BS_BRANCH;
+        }
+        break;
+    case OPC_RISC_CSRRCI:
+        {
+            tcg_gen_movi_tl(cpu_PC, ctx->pc);
+            TCGv imm_rs1 = tcg_temp_new();
+            tcg_gen_movi_tl(imm_rs1, rs1);
+            gen_helper_csrrc(dest, cpu_env, imm_rs1, csr_store, cpu_PC);
+            gen_set_gpr(rd, dest);
+            tcg_temp_free(imm_rs1);
+            /* end tb since we may be changing priv modes */
+            tcg_gen_movi_tl(cpu_PC, ctx->pc + 4);
+            tcg_gen_exit_tb(0); /* no chaining */
+            ctx->bstate = BS_BRANCH;
+        }
+        break;
+    default:
+        kill_unknown(ctx, NEW_RISCV_EXCP_ILLEGAL_INST);
+        break;
+
+    }
+    tcg_temp_free(source1);
+    tcg_temp_free(dest);
+    tcg_temp_free(csr_store);
+}
+
 static void gen_fp_load(DisasContext *ctx, uint32_t opc,
                       int rd, int rs1, int16_t imm)
 {
@@ -1717,6 +1856,10 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx)
             tcg_gen_exit_tb(0); /* no chaining */
             ctx->bstate = BS_BRANCH;
         }
+        break;
+    case OPC_RISC_SYSTEM:
+        gen_system(ctx, MASK_OP_SYSTEM(ctx->opcode), rd, rs1,
+                   (ctx->opcode & 0xFFF00000) >> 20);
         break;
     case OPC_RISC_ATOMIC:
         gen_atomic(ctx, MASK_OP_ATOMIC(ctx->opcode), rd, rs1, rs2);
