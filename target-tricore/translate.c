@@ -8812,6 +8812,8 @@ void cpu_state_reset(CPUTriCoreState *env)
 {
     /* Reset Regs to Default Value */
     env->PSW = 0xb80;
+    memset(env->gpr_a, 0, sizeof(uint32_t) * 16);
+    memset(env->gpr_d, 0, sizeof(uint32_t) * 16);
     fpu_set_state(env);
 }
 

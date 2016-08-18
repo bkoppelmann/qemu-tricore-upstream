@@ -144,3 +144,8 @@ void psw_write(CPUTriCoreState *env, uint32_t val)
 
     fpu_set_state(env);
 }
+
+hwaddr tricore_cpu_get_phys_page_debug(CPUState *cs, vaddr addr)
+{
+    return (hwaddr)addr;
+}

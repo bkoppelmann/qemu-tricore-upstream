@@ -402,7 +402,8 @@ enum {
 void cpu_state_reset(CPUTriCoreState *s);
 void tricore_tcg_init(void);
 int cpu_tricore_signal_handler(int host_signum, void *pinfo, void *puc);
-
+int tricore_cpu_gdb_read_register(CPUState *cs, uint8_t *mem_buf, int n);
+int tricore_cpu_gdb_write_register(CPUState *cs, uint8_t *mem_buf, int n);
 static inline void cpu_get_tb_cpu_state(CPUTriCoreState *env, target_ulong *pc,
                                         target_ulong *cs_base, uint32_t *flags)
 {
@@ -420,5 +421,5 @@ TriCoreCPU *cpu_tricore_init(const char *cpu_model);
 int cpu_tricore_handle_mmu_fault(CPUState *cpu, target_ulong address,
                                  int rw, int mmu_idx);
 #define cpu_handle_mmu_fault cpu_tricore_handle_mmu_fault
-
+uint32_t tricore_cpu_gdb_read_csfr(CPUTriCoreState *env, int n);
 #endif /* TRICORE_CPU_H */
