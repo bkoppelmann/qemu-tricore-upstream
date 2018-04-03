@@ -1,0 +1,136 @@
+
+#Fields
+%disp8_const8     8:8
+%const4_s2_n_off4 12:4
+%disp4_s1_d_off4  8:4
+%n                6:2
+
+# Name groups
+&sb   disp8
+&sbc  disp4 const4
+&sbr  disp4 s2
+&sbrn disp4 n
+&sc   const8
+&slr  s2 d
+&slro off4 d
+&sr   s1_d
+&src  s1_d const4
+&sro  s2 off4
+&srr  s2 s1_d
+&srrs s2 s1_d n
+&ssr  s2 s1
+&ssro off4 s1
+
+#Formats
+@sb   ................ &sb   disp8=%disp8_const8
+@sbc  ................ &sbc  disp4=%disp4_s1_d_off4 const4=%const4_s2_n_off4
+@sbr  ................ &sbr  disp4=%disp4_s1_d_off4 s2=%const4_s2_n_off4
+@sbrn ................ &sbrn disp4=%disp4_s1_d_off4 n=%const4_s2_n_off4
+@sc   ................ &sc   const8=%disp8_const8
+@slr  ................ &slr  s2=%const4_s2_n_off4 d=%disp4_s1_d_off4
+@slro ................ &slro off4=%const4_s2_n_off4 d=%disp4_s1_d_off4
+@sr   ................ &sr   s1_d=%disp4_s1_d_off4
+@src  ................ &src  s1_d=%disp4_s1_d_off4 const4=%const4_s2_n_off4
+@sro  ................ &sro  s2=%const4_s2_n_off4 off4=%disp4_s1_d_off4
+@srr  ................ &srr  s2=%const4_s2_n_off4 s1_d=%disp4_s1_d_off4
+@srrs ................ &srrs s2=%const4_s2_n_off4 s1_d=%disp4_s1_d_off4 %n
+@ssr  ................ &ssr  s2=%const4_s2_n_off4 s1=%disp4_s1_d_off4
+@ssro ................ &ssro off4=%const4_s2_n_off4 s1=%disp4_s1_d_off4
+
+#Instructions
+
+src_add      .... .... 11000010 @src  #D[a] = D[a] + sign_ext(const4)
+src_add_a15  .... .... 10010010 @src  #D[a] = D[15] + sign_ext(const4)
+src_add_15A  .... .... 10011010 @src  #D[15] = D[a] + sign_ext(const4)
+srr_add      .... .... 01000010 @srr  #D[a] = D[a] + D[b]
+srr_add_A15  .... .... 00010010 @srr  #D[a] = D[15] + D[b]
+srr_add_15A  .... .... 00011010 @srr  #D[15] = D[a] + D[b]
+src_add_a    .... .... 10110000 @src  #A[a] = A[a] + sign_ext(const4)
+srr_add_a    .... .... 00110000 @srr  #A[a] = A[a] + A[b]
+add_s        .... .... 00100010 @srr  #D[a] = ssov(D[a] + D[b], 32)
+addsc_a      .... .... ..010000 @srrs #A[a] = (A[a] + (D[15] << n))
+sc_and       .... .... 00010110 @sc   #D[15] = D[15] & zero_ext(const8)
+srr_and      .... .... 00100110 @srr  #D[a] = D[a] & D[b]
+bisr         .... .... 11100000 @sc
+cadd         .... .... 10001010 @src
+caddn        .... .... 11001010 @src
+call         .... .... 01011100 @sb
+src_cmov     .... .... 10101010 @src  # D[a] = ((D[15] != 0) ? sign_ext(const4) : D[a])
+srr_cmov     .... .... 00101010 @srr  # D[a] = ((D[15] != 0) ? D[b] : D[a]);
+src_cmovn    .... .... 11101010 @src  # D[a] = ((D[15] == 0) ? sign_ext(const4) : D[a])
+srr_cmovn    .... .... 01101010 @srr  # D[a] = ((D[15] == 0) ? D[b] : D[a]);
+src_eq       .... .... 10111010 @src  # D[15] = zero_ext(D[a] == sign_ext(const4))
+srr_eq       .... .... 00111010 @srr  # D[15] = zero_ext(D[a] == D[b])
+j            .... .... 00011101 @sb   # PC = PC + sign_ext(disp8) * 2;
+sbc_jeq      .... .... 00011110 @sbc  #if (D[15] == sign_ext(const4)) then PC = PC + zero_ext(disp4) * 2;
+sbr_jeq      .... .... 00111110 @sbr  #if (D[15] == D[b]) then PC = PC + zero_ext(disp4) * 2;
+jgez         .... .... 11001110 @sbr  #if (D[b] >= 0) then PC = PC + zero_ext(disp4) * 2;
+jgtz         .... .... 01001110 @sbr  #if (D[b] > 0) then PC = PC + zero_ext(disp4) * 2;
+ji           0000 .... 11011100 @sr   #PC = {A[a][31:1], 1’b0};
+jlez         .... .... 10001110 @sbr  #If (D[b] <= 0) then PC = PC + zero_ext(disp4) * 2;
+jltz         .... .... 00001110 @sbr  #if (D[b] < 0) then PC = PC + zero_ext(disp4) * 2;
+sbc_jne      .... .... 01011110 @sbc  #if (D[15] != sign_ext(const4)) then PC = PC + zero_ext(disp4) * 2;
+sbr_jne      .... .... 01111110 @sbr  #if (D[15] != D[b]) then PC = PC + zero_ext(disp4) * 2;
+sb_jnz       .... .... 11101110 @sb   #if (D[15] != 0) then PC = PC + sign_ext(disp8) * 2;
+sbr_jnz      .... .... 11110110 @sbr  #if (D[b] != 0) then PC = PC + zero_ext(disp4) * 2;
+jnz_a        .... .... 01111100 @sbr  #if (A[b] != 0) then PC = PC + zero_ext(disp4) * 2;
+jnz_t        .... .... 10101110 @sbrn #if (A[b] != 0) then PC = PC + zero_ext(disp4) * 2;
+sb_jz        .... .... 01101110 @sb   #if (D[15] == 0) then PC = PC + sign_ext(disp8) * 2;
+sbr_jz       .... .... 01110110 @sbr  #if (D[b] == 0) then PC = PC + zero_ext(disp4) * 2;
+jz_a         .... .... 10111100 @sbr  #if (A[b] == 0) then PC = PC + zero_ext(disp4) * 2;
+jz_t         .... .... 00101110 @sbrn #if (!D[15][n]) then PC = PC + zero_ext(disp4) * 2;
+sc_ld_a      .... .... 11011110 @sc   #A[15] = M(A[10] + zero_ext(4 * const8), word);
+slr_ld_a     .... .... 11010100 @slr  #A[c] = M(A[b], word);
+slr_ld_a_pi  .... .... 11000100 @slr  #A[c] = M(A[b], word); A[b] = A[b] + 4;
+slro_ld_a    .... .... 11001000 @slro #A[c] = M(A[15] + zero_ext(4 * off4), word);
+sro_ld_a     .... .... 11001100 @sro  #A[15] = M(A[b] + zero_ext(4 * off4), word);
+slr_ld_bu    .... .... 00010100 @slr  #D[c] = zero_ext(M(A[b], byte));
+slr_ld_bu_pi .... .... 00000100 @slr  #D[c] = zero_ext(M(A[b], byte)); A[b] = A[b] + 1;
+slro_ld_bu   .... .... 00001000 @slro #D[c] = zero_ext(M(A[15] + zero_ext(off4), byte));
+sro_ld_bu    .... .... 00001100 @sro  #D[15] = zero_ext(M(A[b] + zero_ext(off4), byte));
+slr_ld_h     .... .... 10010100 @slr  #D[c] = sign_ext(M(A[b], halfword));
+slr_ld_h_pi  .... .... 10000100 @slr  #D[c] = sign_ext(M(A[b], half-word)); A[b] = A[b] + 2;
+slro_ld_h    .... .... 10001000 @slro #D[c] = sign_ext(M(A[15] + zero_ext(2 * off4), half-word));
+sro_ld_h     .... .... 10001100 @sro  #D[15] = sign_ext(M(A[b] + zero_ext(2 * off4), half-word));
+sc_ld_w      .... .... 01011000 @sc   #D[15] = M(A[10] + zero_ext(4 * const8), word);
+slr_ld_w     .... .... 01010100 @slr  #D[c] = M(A[b], word);
+slr_ld_w_pi  .... .... 01000100 @slr  #D[c] = M(A[b], word); A[b] = A[b] + 4;
+slro_ld_w    .... .... 01001000 @slro #D[c] = M(A[15] + zero_ext(4 * off4), word);
+sro_ld_w     .... .... 01001100 @sro  #D[15] = M(A[b] + zero_ext(4 * off4), word);
+loop         .... .... 11111100 @sbr
+src_lt       .... .... 00001011 @src #result = (D[a] < sign_ext(const4)); D[15] = zero_ext(result);
+srr_lt       .... .... 01111010 @srr #result = (D[a] < D[b]); D[15] = zero_ext(result);
+sc_mov       .... .... 11011010 @sc  #D[15] = zero_ext(const8);
+src_mov      .... .... 10000010 @src #D[a] = sign_ext(const4);
+srr_mov      .... .... 00000010 @srr #D[a] = D[b];
+src_mov_a    .... .... 10100000 @src #A[a] = zero_ext(const4);
+srr_mov_a    .... .... 01100000 @srr #A[a] = D[b];
+mov_aa       .... .... 01000000 @srr #A[a] = A[b];
+mov_d        .... .... 10000000 @srr #D[a] = A[b];
+mul          .... .... 11100010 @srr #result = D[a] * D[b]; D[a] = result[31:0];
+nop          0000 ---- 00000000
+not          0000 .... 01000110 @sr
+sc_or        .... .... 10010110 @sc  #D[15] = D[15] | zero_ext(const8);
+srr_or       .... .... 10100110 @srr #D[a] = D[a] | D[b];
+ret          1001 ---- 00000000
+rfe          1000 ---- 00000000
+rsub         0101 .... 00110010 @sr
+sat_b        0000 .... 00110010 @sr
+sat_bu       0001 .... 00110010 @sr
+sat_h        0010 .... 00110010 @sr
+sat_hu       0011 .... 00110010 @sr
+sh           .... .... 00000110 @src
+sha          .... .... 10000110 @src
+sc_st_a      .... .... 11111000 @sc   #M(A[10] + zero_ext(4 * const8), word) = A[15];
+sro_st_a     .... .... 11101100 @sro  #M(A[b] + zero_ext(4 * off4), word) = A[15];
+srr_st_a     .... .... 11110100 @srr  #M(A[b], word) = A[a];
+srr_st_a_pi  .... .... 11100100 @ssr  #M(A[b], word) = A[a]; A[b] = A[b] + 4;
+ssro_st_a    .... .... 11101000 @ssro #M(A[15] + zero_ext(4 * off4), word) = A[a];
+sro_st_b     .... .... 00101100 @sro  #M(A[b] + zero_ext(off4), byte) = D[15][7:0];
+ssr_st_b     .... .... 00110100 @ssr  #M(A[b], byte) = D[a][7:0];
+ssr_st_b_pi  .... .... 00100100 @ssr  #M(A[b], byte) = D[a][7:0]; A[b] = A[b] + 1;
+ssro_st_b    .... .... 00101000 @ssro #M(A[15] + zero_ext(off4), byte) = D[a][7:0];
+sro_st_h     .... .... 10101100 @sro  #M(A[b] + zero_ext(2 * off4), half-word) = D[15][15:0];
+ssr_st_h     .... .... 10110100 @ssr  #M(A[b], half-word) = D[a][15:0];
+ssr_st_h_pi  .... .... 10100100 @ssr  #M(A[b], half-word) = D[a][15:0]; A[b] = A[b] + 2;
+ssro_st_h    .... .... 10101000 @ssro #M(A[15] + zero_ext(2 * off4), half-word) = D[a][15:0];
