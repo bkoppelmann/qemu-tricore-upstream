@@ -3595,7 +3595,9 @@ static void gen_compute_branch(DisasContext *ctx, uint32_t opc, int r1,
     ctx->bstate = BS_BRANCH;
 }
 
-
+bool decode16(DisasContext *ctx, uint16_t insn);
+#include "decode16.inc.c"
+#include "trans_tricore_16.inc.c"
 /*
  * Functions for decoding instructions
  */
@@ -8799,7 +8801,9 @@ static void decode_opc(CPUTriCoreState *env, DisasContext *ctx, int *is_branch)
     /* 16-Bit Instruction */
     if ((ctx->opcode & 0x1) == 0) {
         ctx->next_pc = ctx->pc + 2;
-        decode_16Bit_opc(env, ctx);
+        if (!decode16(ctx, ctx->opcode)) {
+            decode_16Bit_opc(env, ctx);
+        }
     /* 32-Bit Instruction */
     } else {
         ctx->next_pc = ctx->pc + 4;

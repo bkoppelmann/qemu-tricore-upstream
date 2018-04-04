@@ -134,3 +134,14 @@ sro_st_h     .... .... 10101100 @sro  #M(A[b] + zero_ext(2 * off4), half-word) =
 ssr_st_h     .... .... 10110100 @ssr  #M(A[b], half-word) = D[a][15:0];
 ssr_st_h_pi  .... .... 10100100 @ssr  #M(A[b], half-word) = D[a][15:0]; A[b] = A[b] + 2;
 ssro_st_h    .... .... 10101000 @ssro #M(A[15] + zero_ext(2 * off4), half-word) = D[a][15:0];
+sc_st_w      .... .... 01111000 @sc
+sro_st_w     .... .... 01101100 @sro
+ssr_st_w     .... .... 01110100 @ssr
+ssr_st_w_pi  .... .... 01100100 @ssr
+ssro_st_w    .... .... 01101000 @ssro
+srr_sub      .... .... 10100010 @srr
+srr_sub_a15  .... .... 01010010 @srr
+srr_sub_15A  .... .... 01011010 @srr
+sub_a        .... .... 00100000 @sc
+sub_s        .... .... 01100010 @srr
+xor          .... .... 11000110 @srr

@@ -1,1 +1,9 @@
 obj-y += translate.o helper.o cpu.o op_helper.o fpu_helper.o
+
+DECODETREE = $(SRC_PATH)/scripts/decodetree.py
+
+target/tricore/decode16.inc.c: $(SRC_PATH)/target/tricore/insns16.decode $(DECODETREE)
+	$(call quiet-command,\
+	  $(PYTHON) $(DECODETREE) --decode decode16 --translate trans16 -w 16 -o $@ $<, "GEN", $(TARGET_DIR)$@)
+
+target/tricore/translate.o: target/tricore/decode16.inc.c
