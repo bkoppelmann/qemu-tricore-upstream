@@ -65,6 +65,7 @@ static const char *regnames_d[] = {
 typedef struct DisasContext {
     struct TranslationBlock *tb;
     target_ulong pc, saved_pc, next_pc;
+    CPUState *cs;
     uint32_t opcode;
     int singlestep_enabled;
     /* Routine used to access memory */
@@ -87,6 +88,12 @@ enum {
     MODE_UL = 2,
     MODE_UU = 3,
 };
+
+static bool tricore_has_feature(DisasContext *ctx, uint64_t feature)
+{
+    CPUTriCoreState *env = ctx->cs->env_ptr;
+    return tricore_feature(env, feature);
+}
 
 void tricore_cpu_dump_state(CPUState *cs, FILE *f,
                             fprintf_function cpu_fprintf, int flags)
@@ -8834,6 +8841,7 @@ void gen_intermediate_code(CPUState *cs, struct TranslationBlock *tb)
     ctx.pc = pc_start;
     ctx.saved_pc = -1;
     ctx.tb = tb;
+    ctx.cs = cs;
     ctx.singlestep_enabled = cs->singlestep_enabled;
     ctx.bstate = BS_NONE;
     ctx.mem_idx = cpu_mmu_index(env, false);
