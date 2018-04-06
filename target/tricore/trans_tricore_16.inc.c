@@ -59,7 +59,8 @@ bool trans16_addsc_a(DisasContext *ctx, arg_addsc_a *a, uint16_t insn)
 
 bool trans16_sc_and(DisasContext *ctx, arg_sc_and *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_andi_tl(cpu_gpr_d[15], cpu_gpr_d[15], a->const8);
+    return true;
 }
 
 bool trans16_srr_and(DisasContext *ctx, arg_srr_and *a, uint16_t insn)
@@ -70,7 +71,8 @@ bool trans16_srr_and(DisasContext *ctx, arg_srr_and *a, uint16_t insn)
 
 bool trans16_bisr(DisasContext *ctx, arg_bisr *a, uint16_t insn)
 {
-    return false;
+    gen_helper_1arg(bisr, a->const8 & 0xff);
+    return true;
 }
 
 bool trans16_cadd(DisasContext *ctx, arg_cadd *a, uint16_t insn)
@@ -238,7 +240,8 @@ bool trans16_jz_t(DisasContext *ctx, arg_jz_t *a, uint16_t insn)
 
 bool trans16_sc_ld_a(DisasContext *ctx, arg_sc_ld_a *a, uint16_t insn)
 {
-    return false;
+    gen_offset_ld(ctx, cpu_gpr_a[15], cpu_gpr_a[10], a->const8 * 4, MO_LESL);
+    return true;
 }
 
 bool trans16_slr_ld_a(DisasContext *ctx, arg_slr_ld_a *a, uint16_t insn)
@@ -303,7 +306,8 @@ bool trans16_sro_ld_h(DisasContext *ctx, arg_sro_ld_h *a, uint16_t insn)
 
 bool trans16_sc_ld_w(DisasContext *ctx, arg_sc_ld_w *a, uint16_t insn)
 {
-    return false;
+    gen_offset_ld(ctx, cpu_gpr_d[15], cpu_gpr_a[10], a->const8 * 4, MO_LESL);
+    return true;
 }
 
 bool trans16_slr_ld_w(DisasContext *ctx, arg_slr_ld_w *a, uint16_t insn)
@@ -347,7 +351,8 @@ bool trans16_srr_lt(DisasContext *ctx, arg_srr_lt *a, uint16_t insn)
 
 bool trans16_sc_mov(DisasContext *ctx, arg_sc_mov *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_movi_tl(cpu_gpr_d[15], a->const8);
+    return true;
 }
 
 bool trans16_src_mov(DisasContext *ctx, arg_src_mov *a, uint16_t insn)
@@ -415,7 +420,8 @@ bool trans16_not(DisasContext *ctx, arg_not *a, uint16_t insn)
 
 bool trans16_sc_or(DisasContext *ctx, arg_sc_or *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_ori_tl(cpu_gpr_d[15], cpu_gpr_d[15], a->const8);
+    return true;
 }
 
 bool trans16_srr_or(DisasContext *ctx, arg_srr_or *a, uint16_t insn)
@@ -473,7 +479,8 @@ bool trans16_sha(DisasContext *ctx, arg_sha *a, uint16_t insn)
 
 bool trans16_sc_st_a(DisasContext *ctx, arg_sc_st_a *a, uint16_t insn)
 {
-    return false;
+    gen_offset_st(ctx, cpu_gpr_a[15], cpu_gpr_a[10], a->const8 * 4, MO_LESL);
+    return true;
 }
 
 bool trans16_sro_st_a(DisasContext *ctx, arg_sro_st_a *a, uint16_t insn)
@@ -547,7 +554,8 @@ bool trans16_ssro_st_h(DisasContext *ctx, arg_ssro_st_h *a, uint16_t insn)
 
 bool trans16_sc_st_w(DisasContext *ctx, arg_sc_st_w *a, uint16_t insn)
 {
-    return false;
+    gen_offset_st(ctx, cpu_gpr_d[15], cpu_gpr_a[10], a->const8 * 4, MO_LESL);
+    return true;
 }
 
 bool trans16_sro_st_w(DisasContext *ctx, arg_sro_st_w *a, uint16_t insn)
@@ -593,7 +601,8 @@ bool trans16_srr_sub_15A(DisasContext *ctx, arg_srr_sub_15A *a, uint16_t insn)
 
 bool trans16_sub_a(DisasContext *ctx, arg_sub_a *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_subi_tl(cpu_gpr_a[10], cpu_gpr_a[10], a->const8);
+    return true;
 }
 
 bool trans16_sub_s(DisasContext *ctx, arg_sub_s *a, uint16_t insn)
