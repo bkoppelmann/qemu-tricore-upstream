@@ -1,16 +1,19 @@
 bool trans16_src_add(DisasContext *ctx, arg_src_add *a, uint16_t insn)
 {
-    return false;
+    gen_addi_d(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d], a->const4);
+    return true;
 }
 
 bool trans16_src_add_a15(DisasContext *ctx, arg_src_add_a15 *a, uint16_t insn)
 {
-    return false;
+    gen_addi_d(cpu_gpr_d[a->s1_d], cpu_gpr_d[15], a->const4);
+    return true;
 }
 
 bool trans16_src_add_15A(DisasContext *ctx, arg_src_add_15A *a, uint16_t insn)
 {
-    return false;
+    gen_addi_d(cpu_gpr_d[15], cpu_gpr_d[a->s1_d], a->const4);
+    return true;
 }
 
 bool trans16_srr_add(DisasContext *ctx, arg_srr_add *a, uint16_t insn)
@@ -30,11 +33,13 @@ bool trans16_srr_add_15A(DisasContext *ctx, arg_srr_add_15A *a, uint16_t insn)
 
 bool trans16_src_add_a(DisasContext *ctx, arg_src_add_a *a, uint16_t insn)
 {
+    tcg_gen_addi_tl(cpu_gpr_a[a->s1_d], cpu_gpr_a[a->s1_d], a->const4);
     return false;
 }
 
 bool trans16_srr_add_a(DisasContext *ctx, arg_srr_add_a *a, uint16_t insn)
 {
+
     return false;
 }
 
@@ -65,12 +70,16 @@ bool trans16_bisr(DisasContext *ctx, arg_bisr *a, uint16_t insn)
 
 bool trans16_cadd(DisasContext *ctx, arg_cadd *a, uint16_t insn)
 {
-    return false;
+    gen_condi_add(TCG_COND_NE, cpu_gpr_d[a->s1_d], a->const4,
+                  cpu_gpr_d[a->s1_d], cpu_gpr_d[15]);
+    return true;
 }
 
 bool trans16_caddn(DisasContext *ctx, arg_caddn *a, uint16_t insn)
 {
-    return false;
+    gen_condi_add(TCG_COND_EQ, cpu_gpr_d[a->s1_d], a->const4,
+                  cpu_gpr_d[a->s1_d], cpu_gpr_d[15]);
+    return true;
 }
 
 bool trans16_call(DisasContext *ctx, arg_call *a, uint16_t insn)
@@ -80,7 +89,13 @@ bool trans16_call(DisasContext *ctx, arg_call *a, uint16_t insn)
 
 bool trans16_src_cmov(DisasContext *ctx, arg_src_cmov *a, uint16_t insn)
 {
-    return false;
+    TCGv temp = tcg_const_tl(0);
+    TCGv temp2 = tcg_const_tl(a->const4);
+    tcg_gen_movcond_tl(TCG_COND_NE, cpu_gpr_d[a->s1_d], cpu_gpr_d[15], temp,
+                       temp2, cpu_gpr_d[a->s1_d]);
+    tcg_temp_free(temp);
+    tcg_temp_free(temp2);
+    return true;
 }
 
 bool trans16_srr_cmov(DisasContext *ctx, arg_srr_cmov *a, uint16_t insn)
@@ -90,7 +105,13 @@ bool trans16_srr_cmov(DisasContext *ctx, arg_srr_cmov *a, uint16_t insn)
 
 bool trans16_src_cmovn(DisasContext *ctx, arg_src_cmovn *a, uint16_t insn)
 {
-    return false;
+    TCGv temp = tcg_const_tl(0);
+    TCGv temp2 = tcg_const_tl(a->const4);
+    tcg_gen_movcond_tl(TCG_COND_EQ, cpu_gpr_d[a->s1_d], cpu_gpr_d[15], temp,
+                       temp2, cpu_gpr_d[a->s1_d]);
+    tcg_temp_free(temp);
+    tcg_temp_free(temp2);
+    return true;
 }
 
 bool trans16_srr_cmovn(DisasContext *ctx, arg_srr_cmovn *a, uint16_t insn)
@@ -100,7 +121,9 @@ bool trans16_srr_cmovn(DisasContext *ctx, arg_srr_cmovn *a, uint16_t insn)
 
 bool trans16_src_eq(DisasContext *ctx, arg_src_eq *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_gpr_d[15], cpu_gpr_d[a->s1_d],
+                        a->const4);
+    return true;
 }
 
 bool trans16_srr_eq(DisasContext *ctx, arg_srr_eq *a, uint16_t insn)
@@ -295,7 +318,9 @@ bool trans16_loop(DisasContext *ctx, arg_loop *a, uint16_t insn)
 
 bool trans16_src_lt(DisasContext *ctx, arg_src_lt *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_setcondi_tl(TCG_COND_LT, cpu_gpr_d[15], cpu_gpr_d[a->s1_d],
+                        a->const4);
+    return true;
 }
 
 bool trans16_srr_lt(DisasContext *ctx, arg_srr_lt *a, uint16_t insn)
@@ -310,7 +335,8 @@ bool trans16_sc_mov(DisasContext *ctx, arg_sc_mov *a, uint16_t insn)
 
 bool trans16_src_mov(DisasContext *ctx, arg_src_mov *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_movi_tl(cpu_gpr_d[a->s1_d], a->const4);
+    return true;
 }
 
 bool trans16_srr_mov(DisasContext *ctx, arg_srr_mov *a, uint16_t insn)
@@ -320,7 +346,9 @@ bool trans16_srr_mov(DisasContext *ctx, arg_srr_mov *a, uint16_t insn)
 
 bool trans16_src_mov_a(DisasContext *ctx, arg_src_mov_a *a, uint16_t insn)
 {
-    return false;
+    //FIXME: Sign extend const4
+    tcg_gen_movi_tl(cpu_gpr_a[a->s1_d], a->const4);
+    return true;
 }
 
 bool trans16_srr_mov_a(DisasContext *ctx, arg_srr_mov_a *a, uint16_t insn)
@@ -336,6 +364,16 @@ bool trans16_mov_aa(DisasContext *ctx, arg_mov_aa *a, uint16_t insn)
 bool trans16_mov_d(DisasContext *ctx, arg_mov_d *a, uint16_t insn)
 {
     return false;
+}
+
+bool trans16_mov_e(DisasContext *ctx, arg_mov_e *a, uint16_t insn)
+{
+    if (!tricore_has_feature(ctx, TRICORE_FEATURE_16)) {
+        return false;
+    }
+    tcg_gen_movi_tl(cpu_gpr_d[a->s1_d], a->const4);
+    tcg_gen_sari_tl(cpu_gpr_d[a->s1_d+1], cpu_gpr_d[a->s1_d], 31);
+    return true;
 }
 
 bool trans16_mul(DisasContext *ctx, arg_mul *a, uint16_t insn)
@@ -400,12 +438,14 @@ bool trans16_sat_hu(DisasContext *ctx, arg_sat_hu *a, uint16_t insn)
 
 bool trans16_sh(DisasContext *ctx, arg_sh *a, uint16_t insn)
 {
-    return false;
+    gen_shi(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d], a->const4);
+    return true;
 }
 
 bool trans16_sha(DisasContext *ctx, arg_sha *a, uint16_t insn)
 {
-    return false;
+    gen_shaci(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d], a->const4);
+    return true;
 }
 
 bool trans16_sc_st_a(DisasContext *ctx, arg_sc_st_a *a, uint16_t insn)

@@ -107,6 +107,7 @@ src_mov_a    .... .... 10100000 @src #A[a] = zero_ext(const4);
 srr_mov_a    .... .... 01100000 @srr #A[a] = D[b];
 mov_aa       .... .... 01000000 @srr #A[a] = A[b];
 mov_d        .... .... 10000000 @srr #D[a] = A[b];
+mov_e        .... .... 11010010 @src
 mul          .... .... 11100010 @srr #result = D[a] * D[b]; D[a] = result[31:0];
 nop          0000 ---- 00000000
 not          0000 .... 01000110 @sr
