@@ -54,7 +54,11 @@ bool trans16_add_s(DisasContext *ctx, arg_add_s *a, uint16_t insn)
 
 bool trans16_addsc_a(DisasContext *ctx, arg_addsc_a *a, uint16_t insn)
 {
-    return false;
+    TCGv temp = tcg_temp_new();
+    tcg_gen_shli_tl(temp, cpu_gpr_d[15], a->n);
+    tcg_gen_add_tl(cpu_gpr_a[a->s1_d], cpu_gpr_a[a->s2], temp);
+    tcg_temp_free(temp);
+    return true;
 }
 
 bool trans16_sc_and(DisasContext *ctx, arg_sc_and *a, uint16_t insn)
@@ -91,7 +95,8 @@ bool trans16_caddn(DisasContext *ctx, arg_caddn *a, uint16_t insn)
 
 bool trans16_call(DisasContext *ctx, arg_call *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SB_CALL, 0, 0, 0, a->disp8);
+    return true;
 }
 
 bool trans16_src_cmov(DisasContext *ctx, arg_src_cmov *a, uint16_t insn)
@@ -164,92 +169,128 @@ bool trans16_fret(DisasContext *ctx, arg_fret *a, uint16_t insn)
 
 bool trans16_j(DisasContext *ctx, arg_j *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SB_J, 0, 0, 0, a->disp8);
+    return true;
 }
 
 bool trans16_sbc_jeq(DisasContext *ctx, arg_sbc_jeq *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBC_JEQ, 0, 0, a->const4, a->disp4);
+    return true;
+}
+
+bool trans16_sbc_jeq2(DisasContext *ctx, arg_sbc_jeq2 *a, uint16_t insn)
+{
+    if (!tricore_has_feature(ctx, TRICORE_FEATURE_16)) {
+        return false;
+    }
+    gen_compute_branch(ctx, OPC1_16_SBC_JEQ2, 0, 0, a->const4, a->disp4);
+    return true;
 }
 
 bool trans16_sbr_jeq(DisasContext *ctx, arg_sbr_jeq *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JEQ, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_jgez(DisasContext *ctx, arg_jgez *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JGEZ, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_jgtz(DisasContext *ctx, arg_jgtz *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JGTZ, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_ji(DisasContext *ctx, arg_ji *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SR_JI, a->s1_d, 0, 0, 0);
+    return true;
 }
 
 bool trans16_jlez(DisasContext *ctx, arg_jlez *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JLEZ, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_jltz(DisasContext *ctx, arg_jltz *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JLTZ, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_sbc_jne(DisasContext *ctx, arg_sbc_jne *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBC_JNE, 0, 0, a->const4, a->disp4);
+    return true;
+}
+
+bool trans16_sbc_jne2(DisasContext *ctx, arg_sbc_jne2 *a, uint16_t insn)
+{
+    if (!tricore_has_feature(ctx, TRICORE_FEATURE_16)) {
+        return false;
+    }
+    gen_compute_branch(ctx, OPC1_16_SBC_JNE2, 0, 0, a->const4, a->disp4);
+    return true;
 }
 
 bool trans16_sbr_jne(DisasContext *ctx, arg_sbr_jne *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JNE, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_sb_jnz(DisasContext *ctx, arg_sb_jnz *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SB_JNZ, 0, 0, 0, a->disp8);
+    return true;
 }
 
 bool trans16_sbr_jnz(DisasContext *ctx, arg_sbr_jnz *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JNZ, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_jnz_a(DisasContext *ctx, arg_jnz_a *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JNZ_A, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_jnz_t(DisasContext *ctx, arg_jnz_t *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBRN_JNZ_T, 0, 0, a->n, a->disp4);
+    return true;
 }
 
 bool trans16_sb_jz(DisasContext *ctx, arg_sb_jz *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SB_JZ, 0, 0, 0, a->disp8);
+    return true;
 }
 
 bool trans16_sbr_jz(DisasContext *ctx, arg_sbr_jz *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JZ, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_jz_a(DisasContext *ctx, arg_jz_a *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_JZ_A, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_jz_t(DisasContext *ctx, arg_jz_t *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBRN_JZ_T, 0, 0, a->n, a->disp4);
+    return true;
 }
 
 bool trans16_sc_ld_a(DisasContext *ctx, arg_sc_ld_a *a, uint16_t insn)
@@ -273,7 +314,8 @@ bool trans16_slr_ld_a_pi(DisasContext *ctx, arg_slr_ld_a_pi *a, uint16_t insn)
 
 bool trans16_slro_ld_a(DisasContext *ctx, arg_slro_ld_a *a, uint16_t insn)
 {
-    return false;
+    gen_offset_ld(ctx, cpu_gpr_a[a->d], cpu_gpr_a[15], a->off4 * 4, MO_LESL);
+    return true;
 }
 
 bool trans16_sro_ld_a(DisasContext *ctx, arg_sro_ld_a *a, uint16_t insn)
@@ -297,7 +339,8 @@ bool trans16_slr_ld_bu_pi(DisasContext *ctx, arg_slr_ld_bu_pi *a, uint16_t insn)
 
 bool trans16_slro_ld_bu(DisasContext *ctx, arg_slro_ld_bu *a, uint16_t insn)
 {
-    return false;
+    gen_offset_ld(ctx, cpu_gpr_d[a->d], cpu_gpr_a[15], a->off4, MO_UB);
+    return true;
 }
 
 bool trans16_sro_ld_bu(DisasContext *ctx, arg_sro_ld_bu *a, uint16_t insn)
@@ -321,7 +364,8 @@ bool trans16_slr_ld_h_pi(DisasContext *ctx, arg_slr_ld_h_pi *a, uint16_t insn)
 
 bool trans16_slro_ld_h(DisasContext *ctx, arg_slro_ld_h *a, uint16_t insn)
 {
-    return false;
+    gen_offset_ld(ctx, cpu_gpr_d[a->d], cpu_gpr_a[15], a->off4 * 2, MO_LESW);
+    return true;
 }
 
 bool trans16_sro_ld_h(DisasContext *ctx, arg_sro_ld_h *a, uint16_t insn)
@@ -351,7 +395,8 @@ bool trans16_slr_ld_w_pi(DisasContext *ctx, arg_slr_ld_w_pi *a, uint16_t insn)
 
 bool trans16_slro_ld_w(DisasContext *ctx, arg_slro_ld_w *a, uint16_t insn)
 {
-    return false;
+    gen_offset_ld(ctx, cpu_gpr_d[a->d], cpu_gpr_a[15], a->off4 * 4, MO_LESL);
+    return true;
 }
 
 bool trans16_sro_ld_w(DisasContext *ctx, arg_sro_ld_w *a, uint16_t insn)
@@ -362,7 +407,8 @@ bool trans16_sro_ld_w(DisasContext *ctx, arg_sro_ld_w *a, uint16_t insn)
 
 bool trans16_loop(DisasContext *ctx, arg_loop *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC1_16_SBR_LOOP, a->s2, 0, 0, a->disp4);
+    return true;
 }
 
 bool trans16_src_lt(DisasContext *ctx, arg_src_lt *a, uint16_t insn)
@@ -376,7 +422,7 @@ bool trans16_srr_lt(DisasContext *ctx, arg_srr_lt *a, uint16_t insn)
 {
     tcg_gen_setcond_tl(TCG_COND_LT, cpu_gpr_d[15], cpu_gpr_d[a->s1_d],
                        cpu_gpr_d[a->s2]);
-    return false;
+    return true;
 }
 
 bool trans16_sc_mov(DisasContext *ctx, arg_sc_mov *a, uint16_t insn)
@@ -435,7 +481,7 @@ bool trans16_mov_e(DisasContext *ctx, arg_mov_e *a, uint16_t insn)
 bool trans16_mul(DisasContext *ctx, arg_mul *a, uint16_t insn)
 {
     gen_mul_i32s(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s2]);
-    return false;
+    return true;
 }
 
 bool trans16_nop(DisasContext *ctx, arg_nop *a, uint16_t insn)
@@ -445,7 +491,8 @@ bool trans16_nop(DisasContext *ctx, arg_nop *a, uint16_t insn)
 
 bool trans16_not(DisasContext *ctx, arg_not *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_not_tl(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d]);
+    return true;
 }
 
 bool trans16_sc_or(DisasContext *ctx, arg_sc_or *a, uint16_t insn)
@@ -557,7 +604,8 @@ bool trans16_ssr_st_a_pi(DisasContext *ctx, arg_ssr_st_a_pi *a, uint16_t insn)
 
 bool trans16_ssro_st_a(DisasContext *ctx, arg_ssro_st_a *a, uint16_t insn)
 {
-    return false;
+    gen_offset_st(ctx, cpu_gpr_a[a->s1], cpu_gpr_a[15], a->off4 * 4, MO_LESL);
+    return true;
 }
 
 bool trans16_sro_st_b(DisasContext *ctx, arg_sro_st_b *a, uint16_t insn)
@@ -581,7 +629,8 @@ bool trans16_ssr_st_b_pi(DisasContext *ctx, arg_ssr_st_b_pi *a, uint16_t insn)
 
 bool trans16_ssro_st_b(DisasContext *ctx, arg_ssro_st_b *a, uint16_t insn)
 {
-    return false;
+    gen_offset_st(ctx, cpu_gpr_d[a->s1], cpu_gpr_a[15], a->off4, MO_UB);
+    return true;
 }
 
 bool trans16_sro_st_h(DisasContext *ctx, arg_sro_st_h *a, uint16_t insn)
@@ -605,7 +654,8 @@ bool trans16_ssr_st_h_pi(DisasContext *ctx, arg_ssr_st_h_pi *a, uint16_t insn)
 
 bool trans16_ssro_st_h(DisasContext *ctx, arg_ssro_st_h *a, uint16_t insn)
 {
-    return false;
+    gen_offset_st(ctx, cpu_gpr_d[a->s1], cpu_gpr_a[15], a->off4 * 2, MO_LESW);
+    return true;
 }
 
 bool trans16_sc_st_w(DisasContext *ctx, arg_sc_st_w *a, uint16_t insn)
@@ -635,7 +685,8 @@ bool trans16_ssr_st_w_pi(DisasContext *ctx, arg_ssr_st_w_pi *a, uint16_t insn)
 
 bool trans16_ssro_st_w(DisasContext *ctx, arg_ssro_st_w *a, uint16_t insn)
 {
-    return false;
+    gen_offset_st(ctx, cpu_gpr_d[a->s1], cpu_gpr_a[15], a->off4 * 4, MO_LESL);
+    return true;
 }
 
 bool trans16_srr_sub(DisasContext *ctx, arg_srr_sub *a, uint16_t insn)
