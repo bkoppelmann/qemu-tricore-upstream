@@ -481,14 +481,17 @@ bool trans16_sro_st_a(DisasContext *ctx, arg_sro_st_a *a, uint16_t insn)
     return false;
 }
 
-bool trans16_srr_st_a(DisasContext *ctx, arg_srr_st_a *a, uint16_t insn)
+bool trans16_ssr_st_a(DisasContext *ctx, arg_ssr_st_a *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_st_tl(cpu_gpr_a[a->s1], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LEUL);
+    return true;
 }
 
-bool trans16_srr_st_a_pi(DisasContext *ctx, arg_srr_st_a_pi *a, uint16_t insn)
+bool trans16_ssr_st_a_pi(DisasContext *ctx, arg_ssr_st_a_pi *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_st_tl(cpu_gpr_a[a->s1], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LEUL);
+    tcg_gen_addi_tl(cpu_gpr_a[a->s2], cpu_gpr_a[a->s2], 4);
+    return true;
 }
 
 bool trans16_ssro_st_a(DisasContext *ctx, arg_ssro_st_a *a, uint16_t insn)
@@ -503,12 +506,15 @@ bool trans16_sro_st_b(DisasContext *ctx, arg_sro_st_b *a, uint16_t insn)
 
 bool trans16_ssr_st_b(DisasContext *ctx, arg_ssr_st_b *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_st_tl(cpu_gpr_d[a->s1], cpu_gpr_a[a->s2], ctx->mem_idx, MO_UB);
+    return true;
 }
 
 bool trans16_ssr_st_b_pi(DisasContext *ctx, arg_ssr_st_b_pi *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_st_tl(cpu_gpr_d[a->s1], cpu_gpr_a[a->s2], ctx->mem_idx, MO_UB);
+    tcg_gen_addi_tl(cpu_gpr_a[a->s2], cpu_gpr_a[a->s2], 1);
+    return true;
 }
 
 bool trans16_ssro_st_b(DisasContext *ctx, arg_ssro_st_b *a, uint16_t insn)
@@ -523,12 +529,15 @@ bool trans16_sro_st_h(DisasContext *ctx, arg_sro_st_h *a, uint16_t insn)
 
 bool trans16_ssr_st_h(DisasContext *ctx, arg_ssr_st_h *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_st_tl(cpu_gpr_d[a->s1], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LEUW);
+    return true;
 }
 
 bool trans16_ssr_st_h_pi(DisasContext *ctx, arg_ssr_st_h_pi *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_st_tl(cpu_gpr_d[a->s1], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LEUW);
+    tcg_gen_addi_tl(cpu_gpr_a[a->s2], cpu_gpr_a[a->s2], 2);
+    return true;
 }
 
 bool trans16_ssro_st_h(DisasContext *ctx, arg_ssro_st_h *a, uint16_t insn)
@@ -548,12 +557,15 @@ bool trans16_sro_st_w(DisasContext *ctx, arg_sro_st_w *a, uint16_t insn)
 
 bool trans16_ssr_st_w(DisasContext *ctx, arg_ssr_st_w *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_st_tl(cpu_gpr_d[a->s1], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LEUL);
+    return true;
 }
 
 bool trans16_ssr_st_w_pi(DisasContext *ctx, arg_ssr_st_w_pi *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_st_tl(cpu_gpr_d[a->s1], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LEUL);
+    tcg_gen_addi_tl(cpu_gpr_a[a->s2], cpu_gpr_a[a->s2], 4);
+    return true;
 }
 
 bool trans16_ssro_st_w(DisasContext *ctx, arg_ssro_st_w *a, uint16_t insn)

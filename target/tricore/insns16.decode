@@ -124,8 +124,8 @@ sh           .... .... 00000110 @src
 sha          .... .... 10000110 @src
 sc_st_a      .... .... 11111000 @sc   #M(A[10] + zero_ext(4 * const8), word) = A[15];
 sro_st_a     .... .... 11101100 @sro  #M(A[b] + zero_ext(4 * off4), word) = A[15];
-srr_st_a     .... .... 11110100 @srr  #M(A[b], word) = A[a];
-srr_st_a_pi  .... .... 11100100 @ssr  #M(A[b], word) = A[a]; A[b] = A[b] + 4;
+ssr_st_a     .... .... 11110100 @ssr  #M(A[b], word) = A[a];
+ssr_st_a_pi  .... .... 11100100 @ssr  #M(A[b], word) = A[a]; A[b] = A[b] + 4;
 ssro_st_a    .... .... 11101000 @ssro #M(A[15] + zero_ext(4 * off4), word) = A[a];
 sro_st_b     .... .... 00101100 @sro  #M(A[b] + zero_ext(off4), byte) = D[15][7:0];
 ssr_st_b     .... .... 00110100 @ssr  #M(A[b], byte) = D[a][7:0];
