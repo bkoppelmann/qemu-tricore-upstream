@@ -134,6 +134,11 @@ bool trans16_srr_cmovn(DisasContext *ctx, arg_srr_cmovn *a, uint16_t insn)
     return true;
 }
 
+bool trans16_debug(DisasContext *ctx, arg_debug *a, uint16_t insn)
+{
+    return true;
+}
+
 bool trans16_src_eq(DisasContext *ctx, arg_src_eq *a, uint16_t insn)
 {
     tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_gpr_d[15], cpu_gpr_d[a->s1_d],
@@ -145,6 +150,15 @@ bool trans16_srr_eq(DisasContext *ctx, arg_srr_eq *a, uint16_t insn)
 {
     tcg_gen_setcond_tl(TCG_COND_EQ, cpu_gpr_d[15], cpu_gpr_d[a->s1_d],
                        cpu_gpr_d[a->s2]);
+    return true;
+}
+
+bool trans16_fret(DisasContext *ctx, arg_fret *a, uint16_t insn)
+{
+    if (!tricore_has_feature(ctx, TRICORE_FEATURE_16)) {
+        return false;
+    }
+    gen_fret(ctx);
     return true;
 }
 
@@ -342,7 +356,7 @@ bool trans16_slro_ld_w(DisasContext *ctx, arg_slro_ld_w *a, uint16_t insn)
 
 bool trans16_sro_ld_w(DisasContext *ctx, arg_sro_ld_w *a, uint16_t insn)
 {
-    gen_offset_ld(ctx, cpu_gpr_d[15], cpu_gpr_a[a->s], a->off4 * 4, MO_LESL);
+    gen_offset_ld(ctx, cpu_gpr_d[15], cpu_gpr_a[a->s2], a->off4 * 4, MO_LESL);
     return true;
 }
 
@@ -448,11 +462,15 @@ bool trans16_srr_or(DisasContext *ctx, arg_srr_or *a, uint16_t insn)
 
 bool trans16_ret(DisasContext *ctx, arg_ret *a, uint16_t insn)
 {
-    return false;
+    gen_compute_branch(ctx, OPC2_16_SR_RET, 0, 0, 0, 0);
+    return true;
 }
 
 bool trans16_rfe(DisasContext *ctx, arg_rfe *a, uint16_t insn)
 {
+    gen_helper_rfe(cpu_env);
+    tcg_gen_exit_tb(0);
+    ctx->bstate = BS_BRANCH;
     return false;
 }
 

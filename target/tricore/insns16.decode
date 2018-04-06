@@ -59,8 +59,10 @@ src_cmov     .... .... 10101010 @src  # D[a] = ((D[15] != 0) ? sign_ext(const4) 
 srr_cmov     .... .... 00101010 @srr  # D[a] = ((D[15] != 0) ? D[b] : D[a]);
 src_cmovn    .... .... 11101010 @src  # D[a] = ((D[15] == 0) ? sign_ext(const4) : D[a])
 srr_cmovn    .... .... 01101010 @srr  # D[a] = ((D[15] == 0) ? D[b] : D[a]);
+debug        1010 ---- 00000000
 src_eq       .... .... 10111010 @src  # D[15] = zero_ext(D[a] == sign_ext(const4))
 srr_eq       .... .... 00111010 @srr  # D[15] = zero_ext(D[a] == D[b])
+fret         0111 ---- 00000000
 j            .... .... 00011101 @sb   # PC = PC + sign_ext(disp8) * 2;
 sbc_jeq      .... .... 00011110 @sbc  #if (D[15] == sign_ext(const4)) then PC = PC + zero_ext(disp4) * 2;
 sbr_jeq      .... .... 00111110 @sbr  #if (D[15] == D[b]) then PC = PC + zero_ext(disp4) * 2;
