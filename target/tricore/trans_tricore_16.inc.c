@@ -246,12 +246,15 @@ bool trans16_sc_ld_a(DisasContext *ctx, arg_sc_ld_a *a, uint16_t insn)
 
 bool trans16_slr_ld_a(DisasContext *ctx, arg_slr_ld_a *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_ld_tl(cpu_gpr_a[a->d], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LESL);
+    return true;
 }
 
 bool trans16_slr_ld_a_pi(DisasContext *ctx, arg_slr_ld_a_pi *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_ld_tl(cpu_gpr_a[a->d], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LESL);
+    tcg_gen_addi_tl(cpu_gpr_a[a->s2], cpu_gpr_a[a->s2], 4);
+    return true;
 }
 
 bool trans16_slro_ld_a(DisasContext *ctx, arg_slro_ld_a *a, uint16_t insn)
@@ -266,12 +269,15 @@ bool trans16_sro_ld_a(DisasContext *ctx, arg_sro_ld_a *a, uint16_t insn)
 
 bool trans16_slr_ld_bu(DisasContext *ctx, arg_slr_ld_bu *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_ld_tl(cpu_gpr_d[a->d], cpu_gpr_a[a->s2], ctx->mem_idx, MO_UB);
+    return true;
 }
 
 bool trans16_slr_ld_bu_pi(DisasContext *ctx, arg_slr_ld_bu_pi *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_ld_tl(cpu_gpr_d[a->d], cpu_gpr_a[a->s2], ctx->mem_idx, MO_UB);
+    tcg_gen_addi_tl(cpu_gpr_a[a->s2], cpu_gpr_a[a->s2], 1);
+    return true;
 }
 
 bool trans16_slro_ld_bu(DisasContext *ctx, arg_slro_ld_bu *a, uint16_t insn)
@@ -286,12 +292,15 @@ bool trans16_sro_ld_bu(DisasContext *ctx, arg_sro_ld_bu *a, uint16_t insn)
 
 bool trans16_slr_ld_h(DisasContext *ctx, arg_slr_ld_h *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_ld_tl(cpu_gpr_d[a->d], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LESW);
+    return true;
 }
 
 bool trans16_slr_ld_h_pi(DisasContext *ctx, arg_slr_ld_h_pi *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_ld_tl(cpu_gpr_d[a->d], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LESW);
+    tcg_gen_addi_tl(cpu_gpr_a[a->s2], cpu_gpr_a[a->s2], 2);
+    return true;
 }
 
 bool trans16_slro_ld_h(DisasContext *ctx, arg_slro_ld_h *a, uint16_t insn)
@@ -312,12 +321,15 @@ bool trans16_sc_ld_w(DisasContext *ctx, arg_sc_ld_w *a, uint16_t insn)
 
 bool trans16_slr_ld_w(DisasContext *ctx, arg_slr_ld_w *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_ld_tl(cpu_gpr_d[a->d], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LESL);
+    return true;
 }
 
 bool trans16_slr_ld_w_pi(DisasContext *ctx, arg_slr_ld_w_pi *a, uint16_t insn)
 {
-    return false;
+    tcg_gen_qemu_ld_tl(cpu_gpr_d[a->d], cpu_gpr_a[a->s2], ctx->mem_idx, MO_LESL);
+    tcg_gen_addi_tl(cpu_gpr_a[a->s2], cpu_gpr_a[a->s2], 4);
+    return true;
 }
 
 bool trans16_slro_ld_w(DisasContext *ctx, arg_slro_ld_w *a, uint16_t insn)
