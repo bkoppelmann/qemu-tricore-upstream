@@ -471,32 +471,51 @@ bool trans16_rfe(DisasContext *ctx, arg_rfe *a, uint16_t insn)
     gen_helper_rfe(cpu_env);
     tcg_gen_exit_tb(0);
     ctx->bstate = BS_BRANCH;
-    return false;
+    return true;
 }
 
 bool trans16_rsub(DisasContext *ctx, arg_rsub *a, uint16_t insn)
 {
-    return false;
+    /* overflow only if r1 = -0x80000000 */
+    TCGv temp = tcg_const_i32(-0x80000000);
+    /* calc V bit */
+    tcg_gen_setcond_tl(TCG_COND_EQ, cpu_PSW_V, cpu_gpr_d[a->s1_d], temp);
+    tcg_gen_shli_tl(cpu_PSW_V, cpu_PSW_V, 31);
+    /* calc SV bit */
+    tcg_gen_or_tl(cpu_PSW_SV, cpu_PSW_SV, cpu_PSW_V);
+    /* sub */
+    tcg_gen_neg_tl(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d]);
+    /* calc av */
+    tcg_gen_add_tl(cpu_PSW_AV, cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d]);
+    tcg_gen_xor_tl(cpu_PSW_AV, cpu_gpr_d[a->s1_d], cpu_PSW_AV);
+    /* calc sav */
+    tcg_gen_or_tl(cpu_PSW_SAV, cpu_PSW_SAV, cpu_PSW_AV);
+    tcg_temp_free(temp);
+    return true;
 }
 
 bool trans16_sat_b(DisasContext *ctx, arg_sat_b *a, uint16_t insn)
 {
-    return false;
+    gen_saturate(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d], 0x7f, -0x80);
+    return true;
 }
 
 bool trans16_sat_bu(DisasContext *ctx, arg_sat_bu *a, uint16_t insn)
 {
-    return false;
+    gen_saturate_u(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d], 0xff);
+    return true;
 }
 
 bool trans16_sat_h(DisasContext *ctx, arg_sat_h *a, uint16_t insn)
 {
-    return false;
+    gen_saturate(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d], 0x7fff, -0x8000);
+    return true;
 }
 
 bool trans16_sat_hu(DisasContext *ctx, arg_sat_hu *a, uint16_t insn)
 {
-    return false;
+    gen_saturate_u(cpu_gpr_d[a->s1_d], cpu_gpr_d[a->s1_d], 0xffff);
+    return true;
 }
 
 bool trans16_sh(DisasContext *ctx, arg_sh *a, uint16_t insn)
