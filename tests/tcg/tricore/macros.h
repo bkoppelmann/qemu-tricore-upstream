@@ -6,6 +6,9 @@ test_ ## num: \
     mov %d14, num;    \
     jne testreg, %d15, fail \
 
+#define LI(reg, val) \
+    mov.u reg, hi:val; \
+    addih reg, reg, lo:val;
 
 #define TEST_PASSFAIL \
         j pass; \
@@ -28,6 +31,13 @@ pass: \
 
 #define TEST_R(insn, num, result, rs1) \
     TEST_CASE(num, %d1, result,        \
-    mov %d0, rs1; \
+    LI(%d0, rs1); \
     insn %d1, %d0; \
+    )
+
+#define TEST_RR(insn, num, result, rs1, rs2) \
+    TEST_CASE(num, %d1, result,        \
+    LI(%d0, rs1); \
+    LI(%d1, rs2); \
+    insn %d1, %d0, %d1; \
     )
