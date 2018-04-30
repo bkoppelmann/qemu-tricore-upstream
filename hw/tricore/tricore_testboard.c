@@ -97,7 +97,7 @@ static void tricore_testboard_init(MachineState *machine, int board_id)
     test_dev = g_new(TriCoreTestDeviceState, 1);
     object_initialize(test_dev, sizeof(TriCoreTestDeviceState),
                       TYPE_TRICORE_TEST_DEVICE);
-    memory_region_add_subregion(sysmem, 0xffffffff, &test_dev->iomem);
+    memory_region_add_subregion(sysmem, 0xf0001337, &test_dev->iomem);
 
     tricoretb_binfo.ram_size = machine->ram_size;
     tricoretb_binfo.kernel_filename = machine->kernel_filename;

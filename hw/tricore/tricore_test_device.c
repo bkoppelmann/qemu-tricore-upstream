@@ -45,19 +45,10 @@ static const MemoryRegionOps tricore_test_device_ops = {
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static const VMStateDescription vmstate_tricore_test_device = {
-    .name = "tricore_test_device",
-    .version_id = 1,
-    .minimum_version_id = 1,
-    .fields = (VMStateField[]) {
-        VMSTATE_END_OF_LIST()
-    }
-};
-
 static int tricore_test_device_init(SysBusDevice *sbd)
 {
     DeviceState *dev = DEVICE(sbd);
-    TriCoreDEBUGState *s = TRICORE_DEBUG(dev);
+    TriCoreTestDeviceState *s = TRICORE_TEST_DEVICE(dev);
    /* map memory */
     memory_region_init_io(&s->iomem, OBJECT(s), &tricore_test_device_ops, s,
                           "tricore_test_device", 0x3ff);
@@ -79,9 +70,9 @@ static void tricore_test_device_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo tricore_test_device_info = {
-    .name          = TYPE_TRICORE_DEBUG,
+    .name          = TYPE_TRICORE_TEST_DEVICE,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(TriCoreDEBUGState),
+    .instance_size = sizeof(TriCoreTestDeviceState),
     .class_init    = tricore_test_device_class_init,
 };
 
@@ -91,4 +82,3 @@ static void tricore_test_device_register_types(void)
 }
 
 type_init(tricore_test_device_register_types)
-
