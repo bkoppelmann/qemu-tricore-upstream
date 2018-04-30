@@ -5,7 +5,11 @@ HOST_CC = gcc
 LDFLAGS = -Tlink.ld
 ASFLAGS =
 
+SIM = ../../../tricore-softmmu/qemu-system-tricore
+SIMFLAGS = -M tricore_testboard -nographic -kernel
+
 TESTCASES += test_abs.tst
+TESTCASES += test_clz.tst
 
 all: build
 
@@ -24,15 +28,6 @@ check: $(addprefix run-, $(TESTCASES))
 
 run-%.tst: %.tst
 	$(SIM) $(SIMFLAGS) ./$<
-
-run-test_fail.tst: test_fail.tst
-	! $(SIM) $(SIMFLAGS) ./$<
-
-debug-%.tst: %.tst
-	$(SIM) $(SIMDEBUG) $(SIMFLAGS) ./$<
-
-host-debug-%.tst: %.tst
-	gdb --args $(SIM) $(SIMFLAGS) ./$<
 
 clean:
 	$(RM) -fr $(TESTCASES) $(CRT) linker.ld
