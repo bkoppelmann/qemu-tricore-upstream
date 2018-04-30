@@ -16,19 +16,18 @@ test_ ## num: \
     mov REG_TEST_NUM, num;    \
     jne testreg, REG_CORRECT_RESULT, fail \
 
-#define TEST_PSW(num, correct) \
-    mfcr REG_CALC_PSW, $psw;       \
-    LI(REG_CORRECT_PSW, correct)      \
-    mov REG_TEST_NUM, num;        \
-    jne REG_CALC_PSW, REG_CORRECT_PSW, fail;   \
 
 #define TEST_CASE_PSW(num, testreg, correct, correct_psw, code...) \
 test_ ## num: \
     code;     \
     LI(REG_CORRECT_RESULT, correct) \
     mov REG_TEST_NUM, num;    \
-    jne testreg, REG_CORRECT_RESULT, fail \
-    TEST_PSW(num, correct_psw) \
+    jne testreg, REG_CORRECT_RESULT, fail; \
+    mfcr REG_CALC_PSW, $psw;       \
+    LI(REG_CORRECT_PSW, correct_psw)      \
+    mov REG_TEST_NUM, num;        \
+    jne REG_CALC_PSW, REG_CORRECT_PSW, fail;   \
+
 
 #define LI(reg, val) \
     mov.u reg, lo:val; \
@@ -66,7 +65,7 @@ pass: \
     )
 
 #define TEST_R_PSW(insn, num, result, psw, rs1) \
-    TEST_CASE_PSW(num, REG_CALC_RESULT, result, psw         \
+    TEST_CASE_PSW(num, REG_CALC_RESULT, result, psw,         \
     LI(REG_RS1, rs1); \
     rstv;         \
     insn REG_CORRECT_RESULT, REG_RS1; \

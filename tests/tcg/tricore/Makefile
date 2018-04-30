@@ -3,13 +3,14 @@ LD := tricore-ld
 HOST_CC = gcc
 
 LDFLAGS = -Tlink.ld
-ASFLAGS =
+ASFLAGS = --keep-locals
 
 SIM = ../../../tricore-softmmu/qemu-system-tricore
 SIMFLAGS = -M tricore_testboard -nographic -kernel
 
 TESTCASES += test_abs.tst
 TESTCASES += test_clz.tst
+TESTCASES += test_ftoi.tst
 
 all: build
 
