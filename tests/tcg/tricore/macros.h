@@ -31,7 +31,7 @@ test_ ## num: \
 
 #define LI(reg, val) \
     mov.u reg, lo:val; \
-    movh REG_TEMP_LI, hi:val; \
+    movh REG_TEMP_LI, up:val; \
     or reg, reg, REG_TEMP_LI; \
 
 #define TEST_PASSFAIL \
