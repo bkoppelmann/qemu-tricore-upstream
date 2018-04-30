@@ -71,3 +71,11 @@ pass: \
     insn REG_CORRECT_RESULT, REG_RS1; \
     )
 
+#define TEST_RR_PSW(insn, num, result, psw, rs1, rs2) \
+    TEST_CASE_PSW(num, REG_CALC_RESULT, result, psw,         \
+    LI(REG_RS1, rs1); \
+    LI(REG_RS2, rs2); \
+    rstv;             \
+    insn REG_CALC_RESULT, REG_RS1, REG_RS2; \
+    )
+
