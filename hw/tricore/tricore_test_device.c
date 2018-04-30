@@ -45,14 +45,12 @@ static const MemoryRegionOps tricore_test_device_ops = {
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static int tricore_test_device_init(SysBusDevice *sbd)
+static void tricore_test_device_init(Object *obj)
 {
-    DeviceState *dev = DEVICE(sbd);
-    TriCoreTestDeviceState *s = TRICORE_TEST_DEVICE(dev);
+    TriCoreTestDeviceState *s = TRICORE_TEST_DEVICE(obj);
    /* map memory */
     memory_region_init_io(&s->iomem, OBJECT(s), &tricore_test_device_ops, s,
                           "tricore_test_device", 0x3ff);
-    return 0;
 }
 
 static Property tricore_test_device_properties[] = {
@@ -62,9 +60,7 @@ static Property tricore_test_device_properties[] = {
 static void tricore_test_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
-    k->init = tricore_test_device_init;
     dc->props = tricore_test_device_properties;
     dc->reset = tricore_test_device_reset;
 }
@@ -73,6 +69,7 @@ static const TypeInfo tricore_test_device_info = {
     .name          = TYPE_TRICORE_TEST_DEVICE,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(TriCoreTestDeviceState),
+    .instance_init = tricore_test_device_init,
     .class_init    = tricore_test_device_class_init,
 };
 
