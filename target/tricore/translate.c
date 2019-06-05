@@ -3924,6 +3924,7 @@ static void decode_sr_system(CPUTriCoreState *env, DisasContext *ctx)
     uint32_t op2;
     op2 = MASK_OP_SR_OP2(ctx->opcode);
 
+    TCGv temp = tcg_const_i32(0xf0001337);
     switch (op2) {
     case OPC2_16_SR_NOP:
         break;
@@ -3937,6 +3938,7 @@ static void decode_sr_system(CPUTriCoreState *env, DisasContext *ctx)
         break;
     case OPC2_16_SR_DEBUG:
         /* raise EXCP_DEBUG */
+        tcg_gen_qemu_st_tl(cpu_gpr_d[0], temp, ctx->mem_idx, MO_LESL);
         break;
     case OPC2_16_SR_FRET:
         gen_fret(ctx);
@@ -3944,6 +3946,7 @@ static void decode_sr_system(CPUTriCoreState *env, DisasContext *ctx)
     default:
         generate_trap(ctx, TRAPC_INSN_ERR, TIN2_IOPC);
     }
+    tcg_temp_free(temp);
 }
 
 static void decode_sr_accu(CPUTriCoreState *env, DisasContext *ctx)

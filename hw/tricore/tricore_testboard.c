@@ -31,6 +31,7 @@
 #include "exec/address-spaces.h"
 #include "elf.h"
 #include "hw/tricore/tricore.h"
+#include "hw/tricore/tricore_debug.h"
 #include "qemu/error-report.h"
 
 
@@ -60,6 +61,7 @@ static void tricore_testboard_init(MachineState *machine, int board_id)
 {
     TriCoreCPU *cpu;
     CPUTriCoreState *env;
+    TriCoreDEBUGState *debug;
 
     MemoryRegion *sysmem = get_system_memory();
     MemoryRegion *ext_cram = g_new(MemoryRegion, 1);
@@ -84,7 +86,7 @@ static void tricore_testboard_init(MachineState *machine, int board_id)
     memory_region_init_ram(pcp_text, NULL, "powerlink_pcp_text.ram",
                            32 * KiB, &error_fatal);
 
-    memory_region_add_subregion(sysmem, 0x80000000, ext_cram);
+    memory_region_add_subregion(sysmem, 0xa0000000, ext_cram);
     memory_region_add_subregion(sysmem, 0xa1000000, ext_dram);
     memory_region_add_subregion(sysmem, 0xd4000000, int_cram);
     memory_region_add_subregion(sysmem, 0xd0000000, int_dram);
@@ -93,6 +95,13 @@ static void tricore_testboard_init(MachineState *machine, int board_id)
 
     tricoretb_binfo.ram_size = machine->ram_size;
     tricoretb_binfo.kernel_filename = machine->kernel_filename;
+
+    /* debug device */
+    debug = g_new(TriCoreDEBUGState, 1);
+    object_initialize(debug, sizeof(TriCoreDEBUGState), TYPE_TRICORE_DEBUG);
+    memory_region_add_subregion(sysmem, 0xf0001337, &debug->iomem);
+
+
 
     if (machine->kernel_filename) {
         tricore_load_kernel(env);
